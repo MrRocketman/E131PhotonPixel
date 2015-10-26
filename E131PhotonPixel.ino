@@ -226,11 +226,11 @@ void setup()
     Serial.begin(115200);
 
     // Setup cloud variables and functions
-    Particle.variable("pixelPinMaps", pixelPinMapCharArray, STRING);
-    Particle.variable("universeSize", &(eepromData.universeSize), INT);
-    Particle.variable("gammaSetting", gammaSettingsCharArray, STRING);
-    Particle.variable("localIP", myIpString, STRING);
-    Particle.variable("e131FVersion", firmwareVersion, STRING);
+    Particle.variable("pixelPinMaps", pixelPinMapCharArray);
+    Particle.variable("universeSize", eepromData.universeSize);
+    Particle.variable("gammaSetting", gammaSettingsCharArray);
+    Particle.variable("localIP", myIpString);
+    Particle.variable("e131FVersion", firmwareVersion);
 
     FastLED.addLeds<WS2811, 0>(leds, 576); // Pin 0, 576 pixels
     FastLED.show();
@@ -266,15 +266,6 @@ void loop()
     int dataSize = parsePacket();
     if(dataSize > 0)
     {
-        //Serial.print("Universe: ");
-        //Serial.println(universe);
-
-        //Serial.print("Data[");
-        //Serial.print(dataSize);
-        //Serial.println("]");
-        //printUDPData(data, dataSize);
-
-        // Write to LEDs
         // Extract the dmx data and store it in each LED
         int ledIndex = 0;
         int universeShiftedI = 0;
@@ -299,7 +290,7 @@ void loop()
             }
         }
 
-        // Write the data to the pixels
+        // Write the data to the pixels after we have received all data (This is temporary)
         if(universe == 7)
         {
             FastLED.show();
