@@ -120,6 +120,13 @@ enum pixelPinMapItems
     END_CHANNEL
 };
 
+////// PixelPinMaps Definition ////////
+// - PIXEL_TYPE
+// - NUMBER_OF_PIXELS
+// - START_UNIVERSE
+// - START_CHANNEL
+// - END_UNIVERSE
+// - END_CHANNEL
 typedef struct
 {
     uint16_t pixelPinMaps[NUMBER_OF_OUTPUTS][NUMBER_OF_PIXEL_PIN_MAP_ITEMS]; // 2 bytes per element. 6*16 elements * 2 bytes (uint16_t) = 192 bytes. // See above for what each index is
@@ -186,11 +193,11 @@ CRGB leds[576];
 UDP udp;
 int lastUDPPacketReceiveTime = 0;
 
-bool previousWiFiReadiness = true;
-bool wiFiReadiness = true;
+bool previousWiFiReadiness = false;
+bool wiFiReadiness = false;
 IPAddress myIp;
 char myIpString[24];
-char firmwareVersion[6] = "0.0.1";
+char firmwareVersion[6] = "0.0.2";
 
 /* Diag functions */
 void dumpError(e131_error_t error);
@@ -214,7 +221,7 @@ void setup()
     stats.sequence_errors = 0;
     stats.packet_errors = 0;
     myIp = WiFi.localIP();
-    sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
+    sprintf(myIpString, "%d.%d.%d.%d\0", myIp[0], myIp[1], myIp[2], myIp[3]);
     Serial.print("ip:");
     Serial.println(myIp);
 
@@ -238,7 +245,7 @@ void setup()
     // Setup the UDP connection
     if(udp.setBuffer(E131_PACKET_SIZE, pwbuff->raw))
     {
-      udp.begin(E131_DEFAULT_PORT);
+      //udp.begin(E131_DEFAULT_PORT);
     }
 }
 
@@ -258,7 +265,7 @@ void loop()
     {
         Serial.println("WiFi Back online");
         myIp = WiFi.localIP();
-        sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
+        sprintf(myIpString, "%d.%d.%d.%d\0", myIp[0], myIp[1], myIp[2], myIp[3]);
         udp.begin(E131_DEFAULT_PORT);
     }
 
