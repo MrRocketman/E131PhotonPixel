@@ -407,7 +407,7 @@ void readEEPROMData()
             eepromData.pixelPinMaps[i][START_UNIVERSE] = (uint16_t)(i + 1);
             eepromData.pixelPinMaps[i][START_CHANNEL] = 0;
             eepromData.pixelPinMaps[i][END_UNIVERSE] = (uint16_t)(i + 1);
-            eepromData.pixelPinMaps[i][END_CHANNEL] = DEFAULT_UNIVERSE_SIZE - 1;
+            eepromData.pixelPinMaps[i][END_CHANNEL] = DEFAULT_UNIVERSE_SIZE - 3;
         }
 
         // Init universe size
