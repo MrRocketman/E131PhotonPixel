@@ -187,7 +187,7 @@ char pixelPinMapCharArray[((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_
 // + 2 for null termination
 char gammaSettingsCharArray[(uint8_t)NUMBER_OF_OUTPUTS * 7 + 2]; // Char array of the EEPROM data for the cloud variable
 
-CRGB leds[576];
+CRGB leds[1152];
 
 // An UDP instance to let us send and receive packets over UDP
 UDP udp;
@@ -239,7 +239,7 @@ void setup()
     Particle.variable("localIP", myIpString);
     Particle.variable("e131FVersion", firmwareVersion);
 
-    FastLED.addLeds<WS2811, 0>(leds, 576); // Pin 0, 576 pixels
+    FastLED.addLeds<WS2811, 0>(leds, 1152); // Pin 0, 576 pixels
     FastLED.show();
 
     // Setup the UDP connection
@@ -273,6 +273,12 @@ void loop()
     int dataSize = parsePacket();
     if(dataSize > 0)
     {
+      // For some reason, the packet for universe 7 is not being received reliably, so instead we are drawing slighly late. As soon as the next round of packets is starting
+      if(universe == 1)
+      {
+        FastLED.show();
+      }
+
         // Extract the dmx data and store it in each LED
         int ledIndex = 0;
         int universeShiftedI = 0;
@@ -280,7 +286,7 @@ void loop()
         {
             universeShiftedI = i + (universe - 1) * 512;
             ledIndex = universeShiftedI / 3;
-            if(ledIndex < 576) // TODO: Check universe number
+            if(ledIndex < 1152) // TODO: Check universe number
             {
               if(universeShiftedI % 3 == 0)
               {
@@ -297,11 +303,11 @@ void loop()
             }
         }
 
-        // Write the data to the pixels after we have received all data (This is temporary)
-        if(universe == 7)
+        // For some reason, the packet for universe 7 is not being received reliably
+        /*if(universe == 7)
         {
-            FastLED.show();
-        }
+          FastLED.show();
+        }*/
     }
 }
 
