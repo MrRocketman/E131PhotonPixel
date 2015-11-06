@@ -170,9 +170,7 @@ uint16_t      universe;             /* DMX Universe of last valid packet */
 e131_packet_t *packet;              /* Pointer to last valid packet */
 e131_stats_t  stats;                /* Statistics tracker */
 
-#define NUMBER_OF_MESSAGE_TYPES 10
-// Reserve command 0
-enum {TEST_OUTPUT = 1, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
+enum {SYSTEM_RESET = 0, TEST_OUTPUT, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
 
 eeprom_data_t eepromData;
 // * 6 because each item is a uint16_t which takes up to 5 string characters (65535) + a comma
@@ -460,7 +458,9 @@ int updateParameters(String message)
 
   switch (values[0])
   {
-    case TEST_OUTPUT: // (1) output
+    case SYSTEM_RESET: // (0)
+      System.reset();
+    case TEST_OUTPUT: // (1)
       // do something
       break;
     case SAVE: // (2)
@@ -472,6 +472,8 @@ int updateParameters(String message)
     case UNIVERSE_SIZE: // (3)
       // Update the universeSize
       eepromData.universeSize = values[1];
+      // Save to EEPROM since this is a big change
+      EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
       break;
     case CHANNEL_MAP_FOR_OUTPUT: // (4) output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
       // Update pin map
