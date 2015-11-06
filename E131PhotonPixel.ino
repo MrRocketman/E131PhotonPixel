@@ -105,7 +105,7 @@ typedef union
 #define DEFAULT_UNIVERSE_SIZE 512
 
 #define EEPROM_DATA_ADDRESS 0
-#define EEPROM_ID 0x7A2E05
+#define EEPROM_ID 0x7A2E08
 #define EEPROM_VERSION 0x0001
 
 #define NUMBER_OF_PIXEL_PIN_MAP_ITEMS 6
@@ -409,12 +409,12 @@ void readEEPROMData()
         for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
         {
             // Initialize outputSettings
-            eepromData.outputSettings[i][PIXEL_TYPE] = 0; // Define as WS2812 or whatever
-            eepromData.outputSettings[i][NUMBER_OF_PIXELS] = 170;
-            eepromData.outputSettings[i][START_UNIVERSE] = (uint16_t)(i + 1);
+            eepromData.outputSettings[i][PIXEL_TYPE] = 3; // Define as WS2811
+            eepromData.outputSettings[i][NUMBER_OF_PIXELS] = 0;
+            eepromData.outputSettings[i][START_UNIVERSE] = 1;
             eepromData.outputSettings[i][START_CHANNEL] = 0;
-            eepromData.outputSettings[i][END_UNIVERSE] = (uint16_t)(i + 1);
-            eepromData.outputSettings[i][END_CHANNEL] = DEFAULT_UNIVERSE_SIZE - 3;
+            eepromData.outputSettings[i][END_UNIVERSE] = 1;
+            eepromData.outputSettings[i][END_CHANNEL] = 0;
         }
 
         // Init universe size
@@ -481,26 +481,38 @@ int updateParameters(String message)
       eepromData.outputSettings[values[1]][START_CHANNEL] = values[5];
       eepromData.outputSettings[values[1]][END_UNIVERSE] = values[6];
       eepromData.outputSettings[values[1]][END_CHANNEL] = values[7];
-      // Convert pinMaps and gammaSettings to char arrays for cloud variable access
+      // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
     case PIXEL_TYPE_FOR_OUTPUT: // (5)
       eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
+      // Convert outputSettings to a string for cloud variable access
+      outputSettingsToString();
       break;
     case NUMBER_OF_PIXELS_FOR_OUTPUT: // (6)
       eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[2];
+      // Convert outputSettings to a string for cloud variable access
+      outputSettingsToString();
       break;
     case START_UNIVERSE_FOR_OUTPUT: // (7)
       eepromData.outputSettings[values[1]][START_UNIVERSE] = values[2];
+      // Convert outputSettings to a string for cloud variable access
+      outputSettingsToString();
       break;
     case START_CHANNEL_FOR_OUTPUT: // (8)
       eepromData.outputSettings[values[1]][START_CHANNEL] = values[2];
+      // Convert outputSettings to a string for cloud variable access
+      outputSettingsToString();
       break;
     case END_UNIVERSE_FOR_OUTPUT: // (9)
       eepromData.outputSettings[values[1]][END_UNIVERSE] = values[2];
+      // Convert outputSettings to a string for cloud variable access
+      outputSettingsToString();
       break;
     case END_CHANNEL_FOR_OUTPUT: // (10)
       eepromData.outputSettings[values[1]][END_CHANNEL] = values[2];
+      // Convert outputSettings to a string for cloud variable access
+      outputSettingsToString();
       break;
     default:
       // Invalid message
