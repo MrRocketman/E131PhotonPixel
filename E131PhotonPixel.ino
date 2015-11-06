@@ -171,9 +171,8 @@ e131_packet_t *packet;              /* Pointer to last valid packet */
 e131_stats_t  stats;                /* Statistics tracker */
 
 #define NUMBER_OF_MESSAGE_TYPES 10
-// Each message type should be 3 characters long
-const String messageType[NUMBER_OF_MESSAGE_TYPES] = {"tot", "sav", "usz", "cmo", "pto", "npo", "suo", "sco", "euo", "eco"};
-enum {TEST_OUTPUT = 0, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
+// Reserve command 0
+enum {TEST_OUTPUT = 1, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
 
 eeprom_data_t eepromData;
 // * 6 because each item is a uint16_t which takes up to 5 string characters (65535) + a comma
@@ -190,8 +189,9 @@ int lastUDPPacketReceiveTime = 0;
 bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
-char myIpString[24];
-char firmwareVersion[6] = "0.0.3";
+String myIpString = "";
+String firmwareVersion = "0000000006";
+String systemVersion = "";
 
 /* Diag functions */
 void dumpError(e131_error_t error);
@@ -202,17 +202,7 @@ e131_error_t validateE131Packet();
 void readEEPROMData();
 void outputSettingsToString();
 int updateParameters(String message);
-String messageCommand(String theString);
-int messageValue0(String theString);
-int messageValue1(String theString);
-int messageValue2(String theString);
-int messageValue3(String theString);
-int messageValue4(String theString);
-int messageValue5(String theString);
-int messageValue6(String theString);
-int messageValue7(String theString);
-int messageValue8(String theString);
-int messageValue9(String theString);
+int* messageValues(String theString);
 
 void setup()
 {
@@ -226,9 +216,11 @@ void setup()
     stats.sequence_errors = 0;
     stats.packet_errors = 0;
     myIp = WiFi.localIP();
-    sprintf(myIpString, "%d.%d.%d.%d\0", myIp[0], myIp[1], myIp[2], myIp[3]);
+    myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
     Serial.print("ip:");
     Serial.println(myIp);
+
+    systemVersion = System.version();
 
     WiFi.selectAntenna(ANT_AUTO); // ANT_INTERNAL ANT_EXTERNAL ANT_AUTO
 
@@ -242,7 +234,7 @@ void setup()
     Particle.variable("universeSize", eepromData.universeSize);
     Particle.variable("localIP", myIpString);
     Particle.variable("e131FVersion", firmwareVersion);
-    Particle.variable("sysVersion", System.version());
+    Particle.variable("sysVersion", systemVersion);
     Particle.function("updateParams", updateParameters);
 
     FastLED.addLeds<WS2811, 0>(leds, 1152); // Pin 0, 576 pixels
@@ -271,7 +263,7 @@ void loop()
     {
         Serial.println("WiFi Back online");
         myIp = WiFi.localIP();
-        sprintf(myIpString, "%d.%d.%d.%d\0", myIp[0], myIp[1], myIp[2], myIp[3]);
+        myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
         udp.begin(E131_DEFAULT_PORT);
     }
 
@@ -461,127 +453,101 @@ void outputSettingsToString()
 }
 
 // This is the cloud function "updateParameters"
-// The format of the string should look something like this: "cd:usz;1:512;" or cd:gfo;1:255;2:228;3:255;"
+// The format of the string should look something like this: "usz,512," or gfo,1,255,2,228,3,255,"
 int updateParameters(String message)
 {
-  int output = -1;
-  boolean badMessage = true;
-  for (int i = 0; i < NUMBER_OF_MESSAGE_TYPES; i++)
+  int *values = messageValues(message);
+
+  switch (values[0])
   {
-    if (messageCommand(message).equals(messageType[i]))
+    case TEST_OUTPUT: // (1) output
+      // do something
+      break;
+    case SAVE: // (2)
+      // Save to EEPROM
+      EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
+      // Convert pinMaps and gammaSettings to char arrays for cloud variable access
+      outputSettingsToString();
+      break;
+    case UNIVERSE_SIZE: // (3)
+      // Update the universeSize
+      eepromData.universeSize = values[1];
+      break;
+    case CHANNEL_MAP_FOR_OUTPUT: // (4) output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
+      // Update pin map
+      eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
+      eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[3];
+      eepromData.outputSettings[values[1]][START_UNIVERSE] = values[4];
+      eepromData.outputSettings[values[1]][START_CHANNEL] = values[5];
+      eepromData.outputSettings[values[1]][END_UNIVERSE] = values[6];
+      eepromData.outputSettings[values[1]][END_CHANNEL] = values[7];
+      // Save to EEPROM since this is a big change
+      EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
+      // Convert pinMaps and gammaSettings to char arrays for cloud variable access
+      outputSettingsToString();
+      break;
+    case PIXEL_TYPE_FOR_OUTPUT: // (5)
+      eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
+      break;
+    case NUMBER_OF_PIXELS_FOR_OUTPUT: // (6)
+      eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[2];
+      break;
+    case START_UNIVERSE_FOR_OUTPUT: // (7)
+      eepromData.outputSettings[values[1]][START_UNIVERSE] = values[2];
+      break;
+    case START_CHANNEL_FOR_OUTPUT: // (8)
+      eepromData.outputSettings[values[1]][START_CHANNEL] = values[2];
+      break;
+    case END_UNIVERSE_FOR_OUTPUT: // (9)
+      eepromData.outputSettings[values[1]][END_UNIVERSE] = values[2];
+      break;
+    case END_CHANNEL_FOR_OUTPUT: // (10)
+      eepromData.outputSettings[values[1]][END_CHANNEL] = values[2];
+      break;
+    default:
+      // Invalid message
+      return -1;
+      break;
+  }
+
+  return 1;
+}
+
+// All values should be ints
+int* messageValues(String theString)
+{
+  Serial.print("message:");
+  Serial.println(theString);
+
+  int messageValues[20] = {-1}; // Maxiumum of twenty value
+
+  bool doneReadingString = false;
+  int index = 0;
+  while(!doneReadingString)
+  {
+    int commaIndex = theString.indexOf(",");
+    if(commaIndex != -1 || (commaIndex == -1 && theString.length() > 0))
     {
-      switch (i)
+      String valueString = theString.substring(0, (commaIndex != -1 ? commaIndex : theString.length()));
+      Serial.print("valueString[");
+      Serial.print(index);
+      Serial.print("]:");
+      Serial.println(valueString);
+      if(valueString.length() > 0)
       {
-        case TEST_OUTPUT: // output
-          // do something
-          break;
-        case SAVE: //;
-          // Save to EEPROM
-          EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
-          // Convert pinMaps and gammaSettings to char arrays for cloud variable access
-          outputSettingsToString();
-          break;
-        case UNIVERSE_SIZE: // universeSize
-          // Update the universeSize
-          eepromData.universeSize = messageValue0(message);
-          break;
-        case CHANNEL_MAP_FOR_OUTPUT: // output;startUniverse;startChannel;endUniverse;endChannel;
-          // Update pin map
-          output = messageValue0(message);
-          eepromData.outputSettings[output][PIXEL_TYPE] = messageValue1(message);
-          eepromData.outputSettings[output][NUMBER_OF_PIXELS] = messageValue2(message);
-          eepromData.outputSettings[output][START_UNIVERSE] = messageValue3(message);
-          eepromData.outputSettings[output][START_CHANNEL] = messageValue4(message);
-          eepromData.outputSettings[output][END_UNIVERSE] = messageValue5(message);
-          eepromData.outputSettings[output][END_CHANNEL] = messageValue6(message);
-          // Save to EEPROM since this is a big change
-          EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
-          // Convert pinMaps and gammaSettings to char arrays for cloud variable access
-          outputSettingsToString();
-          break;
-        case PIXEL_TYPE_FOR_OUTPUT:
-          eepromData.outputSettings[messageValue0(message)][PIXEL_TYPE] = messageValue1(message);
-          break;
-        case NUMBER_OF_PIXELS_FOR_OUTPUT:
-          eepromData.outputSettings[messageValue0(message)][NUMBER_OF_PIXELS] = messageValue1(message);
-          break;
-        case START_UNIVERSE_FOR_OUTPUT:
-          eepromData.outputSettings[messageValue0(message)][START_UNIVERSE] = messageValue1(message);
-          break;
-        case START_CHANNEL_FOR_OUTPUT:
-          eepromData.outputSettings[messageValue0(message)][START_CHANNEL] = messageValue1(message);
-          break;
-        case END_UNIVERSE_FOR_OUTPUT:
-          eepromData.outputSettings[messageValue0(message)][END_UNIVERSE] = messageValue1(message);
-          break;
-        case END_CHANNEL_FOR_OUTPUT:
-          eepromData.outputSettings[messageValue0(message)][END_CHANNEL] = messageValue1(message);
-          break;
-        default:
-          // Do something
-          break;
+        Serial.print("intValue:");
+        Serial.println(valueString.toInt());
+        messageValues[index] = valueString.toInt();
+        ++index;
+        theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
       }
-      badMessage = false;
+    }
+    // This isn't a foolproof method of parsing the string, but it will work. (Meaning if the string is "5,10,,15" the 15 will never get read because the double commans will end the loop)
+    else
+    {
+      doneReadingString = true;
     }
   }
-  if (badMessage)
-  {
-    return -1;
-  }
-}
 
-String messageCommand(String theString)
-{
-  return theString.substring(theString.indexOf("cd:") + 3, theString.indexOf(";"));
-}
-
-int messageValue0(String theString)
-{
-  // TODO: Needs bounds checking
-  return theString.substring(theString.indexOf(";0:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue1(String theString)
-{
-  return theString.substring(theString.indexOf(";1:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue2(String theString)
-{
-  return theString.substring(theString.indexOf(";2:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue3(String theString)
-{
-  return theString.substring(theString.indexOf(";3:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue4(String theString)
-{
-  return theString.substring(theString.indexOf(";4:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue5(String theString)
-{
-  return theString.substring(theString.indexOf(";5:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue6(String theString)
-{
-  return theString.substring(theString.indexOf(";6:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue7(String theString)
-{
-  return theString.substring(theString.indexOf(";7:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue8(String theString)
-{
-  return theString.substring(theString.indexOf(";8:") + 3, theString.indexOf(";")).toInt();
-}
-
-int messageValue9(String theString)
-{
-  return theString.substring(theString.indexOf(";9:") + 3, theString.indexOf(";")).toInt();
+  return messageValues;
 }
