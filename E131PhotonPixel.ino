@@ -101,16 +101,16 @@ typedef union
 
 // Don't change this unless you really know what you're doing!
 #define NUMBER_OF_OUTPUTS 16
-#define NUMBER_OF_PIXEL_PIN_MAP_ITEMS 6
 
 #define DEFAULT_UNIVERSE_SIZE 512
 
 #define EEPROM_DATA_ADDRESS 0
-#define EEPROM_ID 0x7A2E03
+#define EEPROM_ID 0x7A2E05
 #define EEPROM_VERSION 0x0001
 
+#define NUMBER_OF_PIXEL_PIN_MAP_ITEMS 6
 // This is used to access pinMaps array elements easier. DO NOT CHANGE!
-enum pixelPinMapItems
+enum outputSettingsItems
 {
     PIXEL_TYPE = 0,
     NUMBER_OF_PIXELS,
@@ -120,20 +120,12 @@ enum pixelPinMapItems
     END_CHANNEL
 };
 
-////// PixelPinMaps Definition ////////
-// - PIXEL_TYPE
-// - NUMBER_OF_PIXELS
-// - START_UNIVERSE
-// - START_CHANNEL
-// - END_UNIVERSE
-// - END_CHANNEL
 typedef struct
 {
-    uint16_t pixelPinMaps[NUMBER_OF_OUTPUTS][NUMBER_OF_PIXEL_PIN_MAP_ITEMS]; // 2 bytes per element. 6*16 elements * 2 bytes (uint16_t) = 192 bytes. // See above for what each index is
+    uint16_t outputSettings[NUMBER_OF_OUTPUTS][NUMBER_OF_PIXEL_PIN_MAP_ITEMS]; // 4 bytes per element. 8*16 elements * 4 bytes (uint32_t) = 384 bytes. // See above for what each index is
     int universeSize; // Was a uint16_t but that makes it hard to expose as a cloud variable. Making it an int is much less confusing
-    uint32_t gammaSettings[NUMBER_OF_OUTPUTS]; // 1 byte per color (eg. FF 0F 4F) = 3 bytes per pin = uint32_t
     uint32_t id;
-    uint16_t version;
+    uint32_t version;
 } eeprom_data_t;
 
 /* Status structure */
@@ -178,14 +170,16 @@ uint16_t      universe;             /* DMX Universe of last valid packet */
 e131_packet_t *packet;              /* Pointer to last valid packet */
 e131_stats_t  stats;                /* Statistics tracker */
 
+#define NUMBER_OF_MESSAGE_TYPES 10
+// Each message type should be 3 characters long
+const String messageType[NUMBER_OF_MESSAGE_TYPES] = {"tot", "sav", "usz", "cmo", "pto", "npo", "suo", "sco", "euo", "eco"};
+enum {TEST_OUTPUT = 0, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
+
 eeprom_data_t eepromData;
 // * 6 because each item is a uint16_t which takes up to 5 string characters (65535) + a comma
 // + NUMBER_OF_OUTPUTS for a semicolon between each pin
 // + 2 for Null termination
-char pixelPinMapCharArray[((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_ITEMS * 6) + NUMBER_OF_OUTPUTS + 2]; // Char arrays of the EEPROM data for cloud variable
-// * 6 because each item is a uint32_t which takes up to 6 string characters as HEX character (FF55FF) + a comma
-// + 2 for null termination
-char gammaSettingsCharArray[(uint8_t)NUMBER_OF_OUTPUTS * 7 + 2]; // Char array of the EEPROM data for the cloud variable
+char outputSettingsCharArray[((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_ITEMS * 6) + NUMBER_OF_OUTPUTS + 2]; // Char arrays of the EEPROM data for cloud variable
 
 CRGB leds[1152];
 
@@ -197,7 +191,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 char myIpString[24];
-char firmwareVersion[6] = "0.0.2";
+char firmwareVersion[6] = "0.0.3";
 
 /* Diag functions */
 void dumpError(e131_error_t error);
@@ -206,8 +200,19 @@ e131_error_t validateE131Packet();
 
 // My functions
 void readEEPROMData();
-void pixelPinMapsToString();
-void gammaSettingsToString();
+void outputSettingsToString();
+int updateParameters(String message);
+String messageCommand(String theString);
+int messageValue0(String theString);
+int messageValue1(String theString);
+int messageValue2(String theString);
+int messageValue3(String theString);
+int messageValue4(String theString);
+int messageValue5(String theString);
+int messageValue6(String theString);
+int messageValue7(String theString);
+int messageValue8(String theString);
+int messageValue9(String theString);
 
 void setup()
 {
@@ -233,11 +238,12 @@ void setup()
     Serial.begin(115200);
 
     // Setup cloud variables and functions
-    Particle.variable("pixelPinMaps", pixelPinMapCharArray);
+    Particle.variable("outputConfig", outputSettingsCharArray);
     Particle.variable("universeSize", eepromData.universeSize);
-    Particle.variable("gammaSetting", gammaSettingsCharArray);
     Particle.variable("localIP", myIpString);
     Particle.variable("e131FVersion", firmwareVersion);
+    Particle.variable("sysVersion", System.version());
+    Particle.function("updateParams", updateParameters);
 
     FastLED.addLeds<WS2811, 0>(leds, 1152); // Pin 0, 576 pixels
     FastLED.show();
@@ -278,6 +284,11 @@ void loop()
       {
         FastLED.show();
       }
+
+      Serial.print("u:");
+      Serial.print(universe);
+      Serial.print("t:");
+      Serial.println(millis());
 
         // Extract the dmx data and store it in each LED
         int ledIndex = 0;
@@ -405,25 +416,19 @@ void readEEPROMData()
     // See if data needs initialization
     if(eepromData.id != EEPROM_ID)
     {
-        // Initialize pixelPinMaps
         for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
         {
-            eepromData.pixelPinMaps[i][PIXEL_TYPE] = 0; // Define as WS2812 or whatever
-            eepromData.pixelPinMaps[i][NUMBER_OF_PIXELS] = 170;
-            eepromData.pixelPinMaps[i][START_UNIVERSE] = (uint16_t)(i + 1);
-            eepromData.pixelPinMaps[i][START_CHANNEL] = 0;
-            eepromData.pixelPinMaps[i][END_UNIVERSE] = (uint16_t)(i + 1);
-            eepromData.pixelPinMaps[i][END_CHANNEL] = DEFAULT_UNIVERSE_SIZE - 3;
+            // Initialize outputSettings
+            eepromData.outputSettings[i][PIXEL_TYPE] = 0; // Define as WS2812 or whatever
+            eepromData.outputSettings[i][NUMBER_OF_PIXELS] = 170;
+            eepromData.outputSettings[i][START_UNIVERSE] = (uint16_t)(i + 1);
+            eepromData.outputSettings[i][START_CHANNEL] = 0;
+            eepromData.outputSettings[i][END_UNIVERSE] = (uint16_t)(i + 1);
+            eepromData.outputSettings[i][END_CHANNEL] = DEFAULT_UNIVERSE_SIZE - 3;
         }
 
         // Init universe size
         eepromData.universeSize = DEFAULT_UNIVERSE_SIZE;
-
-        // Init gamma settings
-        for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
-        {
-            eepromData.gammaSettings[i] = 0xFFB0F0;
-        }
 
         // Init eeprom version and ID
         eepromData.version = EEPROM_VERSION;
@@ -433,30 +438,150 @@ void readEEPROMData()
         EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
     }
 
-    // Convert pinMaps and gammaSettings to char arrays for cloud variable access
-    pixelPinMapsToString();
-    gammaSettingsToString();
+    // data structure has changed, update the model
+    /*if(eepromData.version != EEPROM_VERSION)
+    {
+
+    }*/
+
+    // Convert pinMaps to char arrays for cloud variable access
+    outputSettingsToString();
 }
 
-// Convert the pixelPinMaps to a string for cloud access
-void pixelPinMapsToString()
+// Convert the outputSettings to a string for cloud access
+void outputSettingsToString()
 {
-    memset(pixelPinMapCharArray, 0, ((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_ITEMS * 6) + NUMBER_OF_OUTPUTS + 2);
-    pixelPinMapCharArray[0] = '\0';
+    memset(outputSettingsCharArray, 0, ((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_ITEMS * 6) + NUMBER_OF_OUTPUTS + 2);
+    outputSettingsCharArray[0] = '\0';
 
     for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
     {
-        sprintf(pixelPinMapCharArray, "%s%u,%u,%u,%u,%u,%u;", pixelPinMapCharArray, eepromData.pixelPinMaps[i][PIXEL_TYPE], eepromData.pixelPinMaps[i][NUMBER_OF_PIXELS], eepromData.pixelPinMaps[i][START_UNIVERSE], eepromData.pixelPinMaps[i][START_CHANNEL], eepromData.pixelPinMaps[i][END_UNIVERSE], eepromData.pixelPinMaps[i][END_CHANNEL]);
+        sprintf(outputSettingsCharArray, "%s%u,%u,%u,%u,%u,%u;", outputSettingsCharArray, eepromData.outputSettings[i][PIXEL_TYPE], eepromData.outputSettings[i][NUMBER_OF_PIXELS], eepromData.outputSettings[i][START_UNIVERSE], eepromData.outputSettings[i][START_CHANNEL], eepromData.outputSettings[i][END_UNIVERSE], eepromData.outputSettings[i][END_CHANNEL]);
     }
 }
 
-void gammaSettingsToString()
+// This is the cloud function "updateParameters"
+// The format of the string should look something like this: "cd:usz;1:512;" or cd:gfo;1:255;2:228;3:255;"
+int updateParameters(String message)
 {
-    memset(gammaSettingsCharArray, 0, (uint8_t)NUMBER_OF_OUTPUTS * 7 + 2);
-    gammaSettingsCharArray[0] = '\0';
-
-    for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
+  int output = -1;
+  boolean badMessage = true;
+  for (int i = 0; i < NUMBER_OF_MESSAGE_TYPES; i++)
+  {
+    if (messageCommand(message).equals(messageType[i]))
     {
-        sprintf(gammaSettingsCharArray, "%s%X,", gammaSettingsCharArray, (unsigned int)(eepromData.gammaSettings[i]));
+      switch (i)
+      {
+        case TEST_OUTPUT: // output
+          // do something
+          break;
+        case SAVE: //;
+          // Save to EEPROM
+          EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
+          // Convert pinMaps and gammaSettings to char arrays for cloud variable access
+          outputSettingsToString();
+          break;
+        case UNIVERSE_SIZE: // universeSize
+          // Update the universeSize
+          eepromData.universeSize = messageValue0(message);
+          break;
+        case CHANNEL_MAP_FOR_OUTPUT: // output;startUniverse;startChannel;endUniverse;endChannel;
+          // Update pin map
+          output = messageValue0(message);
+          eepromData.outputSettings[output][PIXEL_TYPE] = messageValue1(message);
+          eepromData.outputSettings[output][NUMBER_OF_PIXELS] = messageValue2(message);
+          eepromData.outputSettings[output][START_UNIVERSE] = messageValue3(message);
+          eepromData.outputSettings[output][START_CHANNEL] = messageValue4(message);
+          eepromData.outputSettings[output][END_UNIVERSE] = messageValue5(message);
+          eepromData.outputSettings[output][END_CHANNEL] = messageValue6(message);
+          // Save to EEPROM since this is a big change
+          EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
+          // Convert pinMaps and gammaSettings to char arrays for cloud variable access
+          outputSettingsToString();
+          break;
+        case PIXEL_TYPE_FOR_OUTPUT:
+          eepromData.outputSettings[messageValue0(message)][PIXEL_TYPE] = messageValue1(message);
+          break;
+        case NUMBER_OF_PIXELS_FOR_OUTPUT:
+          eepromData.outputSettings[messageValue0(message)][NUMBER_OF_PIXELS] = messageValue1(message);
+          break;
+        case START_UNIVERSE_FOR_OUTPUT:
+          eepromData.outputSettings[messageValue0(message)][START_UNIVERSE] = messageValue1(message);
+          break;
+        case START_CHANNEL_FOR_OUTPUT:
+          eepromData.outputSettings[messageValue0(message)][START_CHANNEL] = messageValue1(message);
+          break;
+        case END_UNIVERSE_FOR_OUTPUT:
+          eepromData.outputSettings[messageValue0(message)][END_UNIVERSE] = messageValue1(message);
+          break;
+        case END_CHANNEL_FOR_OUTPUT:
+          eepromData.outputSettings[messageValue0(message)][END_CHANNEL] = messageValue1(message);
+          break;
+        default:
+          // Do something
+          break;
+      }
+      badMessage = false;
     }
+  }
+  if (badMessage)
+  {
+    return -1;
+  }
+}
+
+String messageCommand(String theString)
+{
+  return theString.substring(theString.indexOf("cd:") + 3, theString.indexOf(";"));
+}
+
+int messageValue0(String theString)
+{
+  // TODO: Needs bounds checking
+  return theString.substring(theString.indexOf(";0:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue1(String theString)
+{
+  return theString.substring(theString.indexOf(";1:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue2(String theString)
+{
+  return theString.substring(theString.indexOf(";2:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue3(String theString)
+{
+  return theString.substring(theString.indexOf(";3:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue4(String theString)
+{
+  return theString.substring(theString.indexOf(";4:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue5(String theString)
+{
+  return theString.substring(theString.indexOf(";5:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue6(String theString)
+{
+  return theString.substring(theString.indexOf(";6:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue7(String theString)
+{
+  return theString.substring(theString.indexOf(";7:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue8(String theString)
+{
+  return theString.substring(theString.indexOf(";8:") + 3, theString.indexOf(";")).toInt();
+}
+
+int messageValue9(String theString)
+{
+  return theString.substring(theString.indexOf(";9:") + 3, theString.indexOf(";")).toInt();
 }
