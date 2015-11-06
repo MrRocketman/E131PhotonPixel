@@ -472,8 +472,6 @@ int updateParameters(String message)
     case UNIVERSE_SIZE: // (3)
       // Update the universeSize
       eepromData.universeSize = values[1];
-      // Save to EEPROM since this is a big change
-      EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
       break;
     case CHANNEL_MAP_FOR_OUTPUT: // (4) output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
       // Update pin map
@@ -483,8 +481,6 @@ int updateParameters(String message)
       eepromData.outputSettings[values[1]][START_CHANNEL] = values[5];
       eepromData.outputSettings[values[1]][END_UNIVERSE] = values[6];
       eepromData.outputSettings[values[1]][END_CHANNEL] = values[7];
-      // Save to EEPROM since this is a big change
-      EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
       // Convert pinMaps and gammaSettings to char arrays for cloud variable access
       outputSettingsToString();
       break;
