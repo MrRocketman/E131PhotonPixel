@@ -100,7 +100,7 @@ typedef union
 } e131_packet_t;
 
 // Don't change this unless you really know what you're doing!
-#define NUMBER_OF_OUTPUTS 16
+#define NUMBER_OF_OUTPUTS 8 // Technically there are 16 available. The extra 8 are just blank headers on the circuit board currently though
 
 #define DEFAULT_UNIVERSE_SIZE 512
 
@@ -170,7 +170,7 @@ uint16_t      universe;             /* DMX Universe of last valid packet */
 e131_packet_t *packet;              /* Pointer to last valid packet */
 e131_stats_t  stats;                /* Statistics tracker */
 
-enum {SYSTEM_RESET = 0, TEST_OUTPUT, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
+enum {SYSTEM_RESET = 0, TEST_ALL, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
 
 eeprom_data_t eepromData;
 // * 6 because each item is a uint16_t which takes up to 5 string characters (65535) + a comma
@@ -190,6 +190,9 @@ IPAddress myIp;
 String myIpString = "";
 String firmwareVersion = "0000000006";
 String systemVersion = "";
+
+bool testingPixels = false;
+uint8_t rainbowHue = 0;
 
 /* Diag functions */
 void dumpError(e131_error_t error);
@@ -235,7 +238,7 @@ void setup()
     Particle.variable("sysVersion", systemVersion);
     Particle.function("updateParams", updateParameters);
 
-    FastLED.addLeds<WS2811, 0>(leds, 1152); // Pin 0, 576 pixels
+    FastLED.addLeds<WS2812, 0>(leds, 1152); // Pin 0, 576 pixels
     FastLED.show();
 
     // Setup the UDP connection
@@ -263,6 +266,29 @@ void loop()
         myIp = WiFi.localIP();
         myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
         udp.begin(E131_DEFAULT_PORT);
+    }
+
+    if(testingPixels == true)
+    {
+	    // First slide the led in one direction
+	    /*for(int i = 0; i < NUM_LEDS; i++)
+      {
+		    // Set the i'th led to red
+		    leds[i] = CHSV(hue++, 255, 255);
+		    // Show the leds
+		    FastLED.show();
+		    // now that we've shown the leds, reset the i'th led to black
+		    // leds[i] = CRGB::Black;
+		    for(int i = 0; i < NUM_LEDS; i++) {
+          leds[i].nscale8(250);
+        }
+		    // Wait a little bit before we loop around and do it again
+		    delay(10);
+	    }*/
+      // FastLED's built-in rainbow generator
+      fill_rainbow(leds, 1152, rainbowHue);
+      rainbowHue ++;
+      FastLED.show();
     }
 
     /* Parse a packet and update pixels */
@@ -458,22 +484,29 @@ int updateParameters(String message)
 
   switch (values[0])
   {
-    case SYSTEM_RESET: // (0)
+    case SYSTEM_RESET:
       System.reset();
-    case TEST_OUTPUT: // (1)
+    case TEST_ALL:
       // do something
+      testingPixels = !testingPixels;
+
+      if(testingPixels == false)
+      {
+        fill_solid(leds, 1152, CHSV(0, 0, 0));
+        FastLED.show();
+      }
       break;
-    case SAVE: // (2)
+    case SAVE:
       // Save to EEPROM
       EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
       // Convert pinMaps and gammaSettings to char arrays for cloud variable access
       outputSettingsToString();
       break;
-    case UNIVERSE_SIZE: // (3)
+    case UNIVERSE_SIZE:
       // Update the universeSize
       eepromData.universeSize = values[1];
       break;
-    case CHANNEL_MAP_FOR_OUTPUT: // (4) output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
+    case CHANNEL_MAP_FOR_OUTPUT: // output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
       // Update pin map
       eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
       eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[3];
@@ -484,32 +517,32 @@ int updateParameters(String message)
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
-    case PIXEL_TYPE_FOR_OUTPUT: // (5)
+    case PIXEL_TYPE_FOR_OUTPUT:
       eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
-    case NUMBER_OF_PIXELS_FOR_OUTPUT: // (6)
+    case NUMBER_OF_PIXELS_FOR_OUTPUT:
       eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[2];
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
-    case START_UNIVERSE_FOR_OUTPUT: // (7)
+    case START_UNIVERSE_FOR_OUTPUT:
       eepromData.outputSettings[values[1]][START_UNIVERSE] = values[2];
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
-    case START_CHANNEL_FOR_OUTPUT: // (8)
+    case START_CHANNEL_FOR_OUTPUT:
       eepromData.outputSettings[values[1]][START_CHANNEL] = values[2];
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
-    case END_UNIVERSE_FOR_OUTPUT: // (9)
+    case END_UNIVERSE_FOR_OUTPUT:
       eepromData.outputSettings[values[1]][END_UNIVERSE] = values[2];
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
-    case END_CHANNEL_FOR_OUTPUT: // (10)
+    case END_CHANNEL_FOR_OUTPUT:
       eepromData.outputSettings[values[1]][END_CHANNEL] = values[2];
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
