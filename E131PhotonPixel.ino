@@ -105,7 +105,7 @@ typedef union
 #define DEFAULT_UNIVERSE_SIZE 512
 
 #define EEPROM_DATA_ADDRESS 0
-#define EEPROM_ID 0x7A2E08
+#define EEPROM_ID 0x7A2E0a
 #define EEPROM_VERSION 0x0001
 
 #define NUMBER_OF_PIXEL_PIN_MAP_ITEMS 6
@@ -123,6 +123,7 @@ enum outputSettingsItems
 typedef struct
 {
     uint16_t outputSettings[NUMBER_OF_OUTPUTS][NUMBER_OF_PIXEL_PIN_MAP_ITEMS]; // 4 bytes per element. 8*16 elements * 4 bytes (uint32_t) = 384 bytes. // See above for what each index is
+    char outputNames[NUMBER_OF_OUTPUTS][32]; // 32 Byte max name lengths
     int universeSize; // Was a uint16_t but that makes it hard to expose as a cloud variable. Making it an int is much less confusing
     uint32_t id;
     uint32_t version;
@@ -170,7 +171,7 @@ uint16_t      universe;             /* DMX Universe of last valid packet */
 e131_packet_t *packet;              /* Pointer to last valid packet */
 e131_stats_t  stats;                /* Statistics tracker */
 
-enum {SYSTEM_RESET = 0, TEST_ALL, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT};
+enum {SYSTEM_RESET = 0, TEST_ALL, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT, NAME_FOR_OUTPUT};
 
 eeprom_data_t eepromData;
 // * 6 because each item is a uint16_t which takes up to 5 string characters (65535) + a comma
@@ -188,7 +189,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "0000000006";
+String firmwareVersion = "0000000007";
 String systemVersion = "";
 
 bool testingPixels = false;
@@ -203,7 +204,8 @@ e131_error_t validateE131Packet();
 void readEEPROMData();
 void outputSettingsToString();
 int updateParameters(String message);
-int* messageValues(String theString);
+void messageValues(String theString, int *messageValues);
+void messageStrings(String theString, int valueToRetrieve, char *theName);
 
 void setup()
 {
@@ -238,7 +240,10 @@ void setup()
     Particle.variable("sysVersion", systemVersion);
     Particle.function("updateParams", updateParameters);
 
-    FastLED.addLeds<WS2812, 0>(leds, 1152); // Pin 0, 576 pixels
+    FastLED.addLeds<WS2812, 0>(leds, 0, 150); // Pin 0, 576 pixels
+    FastLED.addLeds<WS2812, 1>(leds, 150, 64); // Pin 5, 576 pixels
+    FastLED.addLeds<WS2812, 5>(leds, 214, 200); // Pin 5, 576 pixels
+    FastLED.addLeds<WS2812, 6>(leds, 414, 45); // Pin 5, 576 pixels
     FastLED.show();
 
     // Setup the UDP connection
@@ -441,6 +446,9 @@ void readEEPROMData()
             eepromData.outputSettings[i][START_CHANNEL] = 0;
             eepromData.outputSettings[i][END_UNIVERSE] = 1;
             eepromData.outputSettings[i][END_CHANNEL] = 0;
+
+            String("No Name").toCharArray(eepromData.outputNames[i], 32);
+            //eepromData.outputNames[i] = String("No Name");
         }
 
         // Init universe size
@@ -472,7 +480,7 @@ void outputSettingsToString()
 
     for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
     {
-        sprintf(outputSettingsCharArray, "%s%u,%u,%u,%u,%u,%u;", outputSettingsCharArray, eepromData.outputSettings[i][PIXEL_TYPE], eepromData.outputSettings[i][NUMBER_OF_PIXELS], eepromData.outputSettings[i][START_UNIVERSE], eepromData.outputSettings[i][START_CHANNEL], eepromData.outputSettings[i][END_UNIVERSE], eepromData.outputSettings[i][END_CHANNEL]);
+      sprintf(outputSettingsCharArray, "%s%u,%u,%u,%u,%u,%u,%s;", outputSettingsCharArray, eepromData.outputSettings[i][PIXEL_TYPE], eepromData.outputSettings[i][NUMBER_OF_PIXELS], eepromData.outputSettings[i][START_UNIVERSE], eepromData.outputSettings[i][START_CHANNEL], eepromData.outputSettings[i][END_UNIVERSE], eepromData.outputSettings[i][END_CHANNEL], eepromData.outputNames[i]);
     }
 }
 
@@ -480,7 +488,14 @@ void outputSettingsToString()
 // The format of the string should look something like this: "usz,512," or gfo,1,255,2,228,3,255,"
 int updateParameters(String message)
 {
-  int *values = messageValues(message);
+  int values[10];
+  char theName[32];
+  messageValues(message, values);
+
+  if(values[0] == NAME_FOR_OUTPUT)
+  {
+    messageStrings(message, 2, theName);
+  }
 
   switch (values[0])
   {
@@ -547,6 +562,11 @@ int updateParameters(String message)
       // Convert outputSettings to a string for cloud variable access
       outputSettingsToString();
       break;
+    case NAME_FOR_OUTPUT:
+      strcpy(eepromData.outputNames[values[1]], theName);
+      // Convert outputSettings to a string for cloud variable access
+      outputSettingsToString();
+        break;
     default:
       // Invalid message
       return -1;
@@ -557,13 +577,8 @@ int updateParameters(String message)
 }
 
 // All values should be ints
-int* messageValues(String theString)
+void messageValues(String theString, int *messageValues)
 {
-  Serial.print("message:");
-  Serial.println(theString);
-
-  int messageValues[20] = {-1}; // Maxiumum of twenty value
-
   bool doneReadingString = false;
   int index = 0;
   while(!doneReadingString)
@@ -572,14 +587,8 @@ int* messageValues(String theString)
     if(commaIndex != -1 || (commaIndex == -1 && theString.length() > 0))
     {
       String valueString = theString.substring(0, (commaIndex != -1 ? commaIndex : theString.length()));
-      Serial.print("valueString[");
-      Serial.print(index);
-      Serial.print("]:");
-      Serial.println(valueString);
       if(valueString.length() > 0)
       {
-        Serial.print("intValue:");
-        Serial.println(valueString.toInt());
         messageValues[index] = valueString.toInt();
         ++index;
         theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
@@ -591,6 +600,37 @@ int* messageValues(String theString)
       doneReadingString = true;
     }
   }
+}
 
-  return messageValues;
+void messageStrings(String theString, int valueToRetrieve, char *theName)
+{
+  bool doneReadingString = false;
+  int index = 0;
+  while(!doneReadingString)
+  {
+    int commaIndex = theString.indexOf(",");
+    if(commaIndex != -1 || (commaIndex == -1 && theString.length() > 0))
+    {
+      String valueString = theString.substring(0, (commaIndex != -1 ? commaIndex : theString.length()));
+      if(valueString.length() > 0)
+      {
+        if(index == valueToRetrieve)
+        {
+          valueString.toCharArray(theName, 32);
+          return;
+        }
+
+        ++index;
+        theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
+      }
+    }
+    // This isn't a foolproof method of parsing the string, but it will work. (Meaning if the string is "5,10,,15" the 15 will never get read because the double commans will end the loop)
+    else
+    {
+      doneReadingString = true;
+    }
+  }
+
+  String valueString = String("No Name");
+  valueString.toCharArray(theName, 32);
 }
