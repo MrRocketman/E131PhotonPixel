@@ -4,32 +4,32 @@ FASTLED_USING_NAMESPACE;
 SYSTEM_THREAD(ENABLED); // This makes the system cloud connection run on a background thread so as to not delay our timing
 
 /*
-* E131.h
-*
-* Project: E131 - E.131 (sACN) library for Arduino
-* Copyright (c) 2015 Shelby Merrick
-* http://www.forkineye.com
-*
-*  This program is provided free for you to use in any way that you wish,
-*  subject to the laws and regulations where you are using it.  Due diligence
-*  is strongly suggested before using this code.  Please give credit where due.
-*
-*  The Author makes no warranty of any kind, express or implied, with regard
-*  to this program or the documentation contained in this document.  The
-*  Author shall not be liable in any event for incidental or consequential
-*  damages in connection with, or arising out of, the furnishing, performance
-*  or use of these programs.
-*
-*/
+ * E131.h
+ *
+ * Project: E131 - E.131 (sACN) library for Arduino
+ * Copyright (c) 2015 Shelby Merrick
+ * http://www.forkineye.com
+ *
+ *  This program is provided free for you to use in any way that you wish,
+ *  subject to the laws and regulations where you are using it.  Due diligence
+ *  is strongly suggested before using this code.  Please give credit where due.
+ *
+ *  The Author makes no warranty of any kind, express or implied, with regard
+ *  to this program or the documentation contained in this document.  The
+ *  Author shall not be liable in any event for incidental or consequential
+ *  damages in connection with, or arising out of, the furnishing, performance
+ *  or use of these programs.
+ *
+ */
 
 // Helpers
 #define htons(x) ( ((x)<<8) | (((x)>>8)&0xFF) )
 #define ntohs(x) htons(x)
 
 #define htonl(x) ( ((x)<<24 & 0xFF000000UL) | \
-                  ((x)<< 8 & 0x00FF0000UL) | \
-                  ((x)>> 8 & 0x0000FF00UL) | \
-                  ((x)>>24 & 0x000000FFUL) )
+((x)<< 8 & 0x00FF0000UL) | \
+((x)>> 8 & 0x0000FF00UL) | \
+((x)>>24 & 0x000000FFUL) )
 #define ntohl(x) htonl(x)
 
 /* Defaults */
@@ -75,7 +75,7 @@ typedef union
         uint16_t root_flength;
         uint32_t root_vector;
         uint8_t  cid[16];
-
+        
         /* Frame Layer */
         uint16_t frame_flength;
         uint32_t frame_vector;
@@ -85,7 +85,7 @@ typedef union
         uint8_t  sequence_number;
         uint8_t  options;
         uint16_t universe;
-
+        
         /* DMP Layer */
         uint16_t dmp_flength;
         uint8_t  dmp_vector;
@@ -95,7 +95,7 @@ typedef union
         uint16_t property_value_count;
         uint8_t  property_values[513];
     } __attribute__((packed));
-
+    
     uint8_t raw[E131_PACKET_SIZE];
 } e131_packet_t;
 
@@ -213,7 +213,7 @@ void setup()
     memset(pbuff2.raw, 0, sizeof(pbuff2.raw));
     packet = &pbuff1;
     pwbuff = &pbuff2;
-
+    
     sequence = 0;
     stats.num_packets = 0;
     stats.sequence_errors = 0;
@@ -222,16 +222,16 @@ void setup()
     myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
     Serial.print("ip:");
     Serial.println(myIp);
-
+    
     systemVersion = System.version();
-
+    
     WiFi.selectAntenna(ANT_AUTO); // ANT_INTERNAL ANT_EXTERNAL ANT_AUTO
-
+    
     // Read from EEPROM
     readEEPROMData();
-
+    
     Serial.begin(115200);
-
+    
     // Setup cloud variables and functions
     Particle.variable("outputConfig", outputSettingsCharArray);
     Particle.variable("universeSize", eepromData.universeSize);
@@ -239,17 +239,17 @@ void setup()
     Particle.variable("e131FVersion", firmwareVersion);
     Particle.variable("sysVersion", systemVersion);
     Particle.function("updateParams", updateParameters);
-
+    
     FastLED.addLeds<WS2812, 0>(leds, 0, 150); // Pin 0, 576 pixels
     FastLED.addLeds<WS2812, 1>(leds, 150, 64); // Pin 5, 576 pixels
     FastLED.addLeds<WS2812, 5>(leds, 214, 200); // Pin 5, 576 pixels
     FastLED.addLeds<WS2812, 6>(leds, 414, 45); // Pin 5, 576 pixels
     FastLED.show();
-
+    
     // Setup the UDP connection
     if(udp.setBuffer(E131_PACKET_SIZE, pwbuff->raw))
     {
-      //udp.begin(E131_DEFAULT_PORT);
+        //udp.begin(E131_DEFAULT_PORT);
     }
 }
 
@@ -272,45 +272,45 @@ void loop()
         myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
         udp.begin(E131_DEFAULT_PORT);
     }
-
+    
     if(testingPixels == true)
     {
-	    // First slide the led in one direction
-	    /*for(int i = 0; i < NUM_LEDS; i++)
-      {
-		    // Set the i'th led to red
-		    leds[i] = CHSV(hue++, 255, 255);
-		    // Show the leds
-		    FastLED.show();
-		    // now that we've shown the leds, reset the i'th led to black
-		    // leds[i] = CRGB::Black;
-		    for(int i = 0; i < NUM_LEDS; i++) {
-          leds[i].nscale8(250);
-        }
-		    // Wait a little bit before we loop around and do it again
-		    delay(10);
-	    }*/
-      // FastLED's built-in rainbow generator
-      fill_rainbow(leds, 1152, rainbowHue);
-      rainbowHue ++;
-      FastLED.show();
+        // First slide the led in one direction
+        /*for(int i = 0; i < NUM_LEDS; i++)
+         {
+         // Set the i'th led to red
+         leds[i] = CHSV(hue++, 255, 255);
+         // Show the leds
+         FastLED.show();
+         // now that we've shown the leds, reset the i'th led to black
+         // leds[i] = CRGB::Black;
+         for(int i = 0; i < NUM_LEDS; i++) {
+         leds[i].nscale8(250);
+         }
+         // Wait a little bit before we loop around and do it again
+         delay(10);
+         }*/
+        // FastLED's built-in rainbow generator
+        fill_rainbow(leds, 1152, rainbowHue);
+        rainbowHue ++;
+        FastLED.show();
     }
-
+    
     /* Parse a packet and update pixels */
     int dataSize = parsePacket();
     if(dataSize > 0)
     {
-      // For some reason, the packet for universe 7 is not being received reliably, so instead we are drawing slighly late. As soon as the next round of packets is starting
-      if(universe == 1)
-      {
-        FastLED.show();
-      }
-
-      Serial.print("u:");
-      Serial.print(universe);
-      Serial.print("t:");
-      Serial.println(millis());
-
+        // For some reason, the packet for universe 7 is not being received reliably, so instead we are drawing slighly late. As soon as the next round of packets is starting
+        if(universe == 1)
+        {
+            FastLED.show();
+        }
+        
+        Serial.print("u:");
+        Serial.print(universe);
+        Serial.print("t:");
+        Serial.println(millis());
+        
         // Extract the dmx data and store it in each LED
         int ledIndex = 0;
         int universeShiftedI = 0;
@@ -320,26 +320,26 @@ void loop()
             ledIndex = universeShiftedI / 3;
             if(ledIndex < 1152) // TODO: Check universe number
             {
-              if(universeShiftedI % 3 == 0)
-              {
-                  leds[ledIndex].r = data[i];
-              }
-              else if(universeShiftedI % 3 == 1)
-              {
-                  leds[ledIndex].g = data[i];
-              }
-              else
-              {
-                  leds[ledIndex].b = data[i];
-              }
+                if(universeShiftedI % 3 == 0)
+                {
+                    leds[ledIndex].r = data[i];
+                }
+                else if(universeShiftedI % 3 == 1)
+                {
+                    leds[ledIndex].g = data[i];
+                }
+                else
+                {
+                    leds[ledIndex].b = data[i];
+                }
             }
         }
-
+        
         // For some reason, the packet for universe 7 is not being received reliably
         /*if(universe == 7)
-        {
-          FastLED.show();
-        }*/
+         {
+         FastLED.show();
+         }*/
     }
 }
 
@@ -348,7 +348,7 @@ uint16_t parsePacket()
 {
     e131_error_t error;
     uint16_t retval = 0;
-
+    
     int size = udp.parsePacket();
     if (size > 0)
     {
@@ -433,7 +433,7 @@ void printUDPData(uint8_t *udpData, int size)
 void readEEPROMData()
 {
     EEPROM.get(EEPROM_DATA_ADDRESS, eepromData);
-
+    
     // See if data needs initialization
     if(eepromData.id != EEPROM_ID)
     {
@@ -446,28 +446,28 @@ void readEEPROMData()
             eepromData.outputSettings[i][START_CHANNEL] = 0;
             eepromData.outputSettings[i][END_UNIVERSE] = 1;
             eepromData.outputSettings[i][END_CHANNEL] = 0;
-
+            
             String("No Name").toCharArray(eepromData.outputNames[i], 32);
             //eepromData.outputNames[i] = String("No Name");
         }
-
+        
         // Init universe size
         eepromData.universeSize = DEFAULT_UNIVERSE_SIZE;
-
+        
         // Init eeprom version and ID
         eepromData.version = EEPROM_VERSION;
         eepromData.id = EEPROM_ID;
-
+        
         // Save to EEPROM
         EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
     }
-
+    
     // data structure has changed, update the model
     /*if(eepromData.version != EEPROM_VERSION)
-    {
-
-    }*/
-
+     {
+     
+     }*/
+    
     // Convert pinMaps to char arrays for cloud variable access
     outputSettingsToString();
 }
@@ -477,10 +477,10 @@ void outputSettingsToString()
 {
     memset(outputSettingsCharArray, 0, ((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_ITEMS * 6) + NUMBER_OF_OUTPUTS + 2);
     outputSettingsCharArray[0] = '\0';
-
+    
     for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
     {
-      sprintf(outputSettingsCharArray, "%s%u,%u,%u,%u,%u,%u,%s;", outputSettingsCharArray, eepromData.outputSettings[i][PIXEL_TYPE], eepromData.outputSettings[i][NUMBER_OF_PIXELS], eepromData.outputSettings[i][START_UNIVERSE], eepromData.outputSettings[i][START_CHANNEL], eepromData.outputSettings[i][END_UNIVERSE], eepromData.outputSettings[i][END_CHANNEL], eepromData.outputNames[i]);
+        sprintf(outputSettingsCharArray, "%s%u,%u,%u,%u,%u,%u,%s;", outputSettingsCharArray, eepromData.outputSettings[i][PIXEL_TYPE], eepromData.outputSettings[i][NUMBER_OF_PIXELS], eepromData.outputSettings[i][START_UNIVERSE], eepromData.outputSettings[i][START_CHANNEL], eepromData.outputSettings[i][END_UNIVERSE], eepromData.outputSettings[i][END_CHANNEL], eepromData.outputNames[i]);
     }
 }
 
@@ -488,149 +488,149 @@ void outputSettingsToString()
 // The format of the string should look something like this: "usz,512," or gfo,1,255,2,228,3,255,"
 int updateParameters(String message)
 {
-  int values[10];
-  char theName[32];
-  messageValues(message, values);
-
-  if(values[0] == NAME_FOR_OUTPUT)
-  {
-    messageStrings(message, 2, theName);
-  }
-
-  switch (values[0])
-  {
-    case SYSTEM_RESET:
-      System.reset();
-    case TEST_ALL:
-      // do something
-      testingPixels = !testingPixels;
-
-      if(testingPixels == false)
-      {
-        fill_solid(leds, 1152, CHSV(0, 0, 0));
-        FastLED.show();
-      }
-      break;
-    case SAVE:
-      // Save to EEPROM
-      EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
-      // Convert pinMaps and gammaSettings to char arrays for cloud variable access
-      outputSettingsToString();
-      break;
-    case UNIVERSE_SIZE:
-      // Update the universeSize
-      eepromData.universeSize = values[1];
-      break;
-    case CHANNEL_MAP_FOR_OUTPUT: // output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
-      // Update pin map
-      eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
-      eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[3];
-      eepromData.outputSettings[values[1]][START_UNIVERSE] = values[4];
-      eepromData.outputSettings[values[1]][START_CHANNEL] = values[5];
-      eepromData.outputSettings[values[1]][END_UNIVERSE] = values[6];
-      eepromData.outputSettings[values[1]][END_CHANNEL] = values[7];
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-      break;
-    case PIXEL_TYPE_FOR_OUTPUT:
-      eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-      break;
-    case NUMBER_OF_PIXELS_FOR_OUTPUT:
-      eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[2];
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-      break;
-    case START_UNIVERSE_FOR_OUTPUT:
-      eepromData.outputSettings[values[1]][START_UNIVERSE] = values[2];
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-      break;
-    case START_CHANNEL_FOR_OUTPUT:
-      eepromData.outputSettings[values[1]][START_CHANNEL] = values[2];
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-      break;
-    case END_UNIVERSE_FOR_OUTPUT:
-      eepromData.outputSettings[values[1]][END_UNIVERSE] = values[2];
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-      break;
-    case END_CHANNEL_FOR_OUTPUT:
-      eepromData.outputSettings[values[1]][END_CHANNEL] = values[2];
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-      break;
-    case NAME_FOR_OUTPUT:
-      strcpy(eepromData.outputNames[values[1]], theName);
-      // Convert outputSettings to a string for cloud variable access
-      outputSettingsToString();
-        break;
-    default:
-      // Invalid message
-      return -1;
-      break;
-  }
-
-  return 1;
+    int values[10];
+    char theName[32];
+    messageValues(message, values);
+    
+    if(values[0] == NAME_FOR_OUTPUT)
+    {
+        messageStrings(message, 2, theName);
+    }
+    
+    switch (values[0])
+    {
+        case SYSTEM_RESET:
+            System.reset();
+        case TEST_ALL:
+            // do something
+            testingPixels = !testingPixels;
+            
+            if(testingPixels == false)
+            {
+                fill_solid(leds, 1152, CHSV(0, 0, 0));
+                FastLED.show();
+            }
+            break;
+        case SAVE:
+            // Save to EEPROM
+            EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
+            // Convert pinMaps and gammaSettings to char arrays for cloud variable access
+            outputSettingsToString();
+            break;
+        case UNIVERSE_SIZE:
+            // Update the universeSize
+            eepromData.universeSize = values[1];
+            break;
+        case CHANNEL_MAP_FOR_OUTPUT: // output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
+            // Update pin map
+            eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
+            eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[3];
+            eepromData.outputSettings[values[1]][START_UNIVERSE] = values[4];
+            eepromData.outputSettings[values[1]][START_CHANNEL] = values[5];
+            eepromData.outputSettings[values[1]][END_UNIVERSE] = values[6];
+            eepromData.outputSettings[values[1]][END_CHANNEL] = values[7];
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        case PIXEL_TYPE_FOR_OUTPUT:
+            eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        case NUMBER_OF_PIXELS_FOR_OUTPUT:
+            eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[2];
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        case START_UNIVERSE_FOR_OUTPUT:
+            eepromData.outputSettings[values[1]][START_UNIVERSE] = values[2];
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        case START_CHANNEL_FOR_OUTPUT:
+            eepromData.outputSettings[values[1]][START_CHANNEL] = values[2];
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        case END_UNIVERSE_FOR_OUTPUT:
+            eepromData.outputSettings[values[1]][END_UNIVERSE] = values[2];
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        case END_CHANNEL_FOR_OUTPUT:
+            eepromData.outputSettings[values[1]][END_CHANNEL] = values[2];
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        case NAME_FOR_OUTPUT:
+            strcpy(eepromData.outputNames[values[1]], theName);
+            // Convert outputSettings to a string for cloud variable access
+            outputSettingsToString();
+            break;
+        default:
+            // Invalid message
+            return -1;
+            break;
+    }
+    
+    return 1;
 }
 
 // All values should be ints
 void messageValues(String theString, int *messageValues)
 {
-  bool doneReadingString = false;
-  int index = 0;
-  while(!doneReadingString)
-  {
-    int commaIndex = theString.indexOf(",");
-    if(commaIndex != -1 || (commaIndex == -1 && theString.length() > 0))
+    bool doneReadingString = false;
+    int index = 0;
+    while(!doneReadingString)
     {
-      String valueString = theString.substring(0, (commaIndex != -1 ? commaIndex : theString.length()));
-      if(valueString.length() > 0)
-      {
-        messageValues[index] = valueString.toInt();
-        ++index;
-        theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
-      }
+        int commaIndex = theString.indexOf(",");
+        if(commaIndex != -1 || (commaIndex == -1 && theString.length() > 0))
+        {
+            String valueString = theString.substring(0, (commaIndex != -1 ? commaIndex : theString.length()));
+            if(valueString.length() > 0)
+            {
+                messageValues[index] = valueString.toInt();
+                ++index;
+                theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
+            }
+        }
+        // This isn't a foolproof method of parsing the string, but it will work. (Meaning if the string is "5,10,,15" the 15 will never get read because the double commans will end the loop)
+        else
+        {
+            doneReadingString = true;
+        }
     }
-    // This isn't a foolproof method of parsing the string, but it will work. (Meaning if the string is "5,10,,15" the 15 will never get read because the double commans will end the loop)
-    else
-    {
-      doneReadingString = true;
-    }
-  }
 }
 
 void messageStrings(String theString, int valueToRetrieve, char *theName)
 {
-  bool doneReadingString = false;
-  int index = 0;
-  while(!doneReadingString)
-  {
-    int commaIndex = theString.indexOf(",");
-    if(commaIndex != -1 || (commaIndex == -1 && theString.length() > 0))
+    bool doneReadingString = false;
+    int index = 0;
+    while(!doneReadingString)
     {
-      String valueString = theString.substring(0, (commaIndex != -1 ? commaIndex : theString.length()));
-      if(valueString.length() > 0)
-      {
-        if(index == valueToRetrieve)
+        int commaIndex = theString.indexOf(",");
+        if(commaIndex != -1 || (commaIndex == -1 && theString.length() > 0))
         {
-          valueString.toCharArray(theName, 32);
-          return;
+            String valueString = theString.substring(0, (commaIndex != -1 ? commaIndex : theString.length()));
+            if(valueString.length() > 0)
+            {
+                if(index == valueToRetrieve)
+                {
+                    valueString.toCharArray(theName, 32);
+                    return;
+                }
+                
+                ++index;
+                theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
+            }
         }
-
-        ++index;
-        theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
-      }
+        // This isn't a foolproof method of parsing the string, but it will work. (Meaning if the string is "5,10,,15" the 15 will never get read because the double commans will end the loop)
+        else
+        {
+            doneReadingString = true;
+        }
     }
-    // This isn't a foolproof method of parsing the string, but it will work. (Meaning if the string is "5,10,,15" the 15 will never get read because the double commans will end the loop)
-    else
-    {
-      doneReadingString = true;
-    }
-  }
-
-  String valueString = String("No Name");
-  valueString.toCharArray(theName, 32);
+    
+    String valueString = String("No Name");
+    valueString.toCharArray(theName, 32);
 }
