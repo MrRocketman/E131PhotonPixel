@@ -171,6 +171,7 @@ uint16_t      universe;             /* DMX Universe of last valid packet */
 e131_packet_t *packet;              /* Pointer to last valid packet */
 e131_stats_t  stats;                /* Statistics tracker */
 
+enum {TEST_OFF = 0, TEST_RAINBOW, TEST_RGB, TEST_WHITE};
 enum {jWS2811 = 0, jWS2811_400, jNEOPIXEL, jWS2812, jWS2812B, jAPA104, jLPD1886};
 enum {SYSTEM_RESET = 0, TEST_ALL, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT, NAME_FOR_OUTPUT};
 
@@ -191,11 +192,12 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "0000000008";
+String firmwareVersion = "0000000009";
 String systemVersion = "";
 
-bool testingPixels = false;
+uint8_t testingPixels = 0;
 uint8_t rainbowHue = 0;
+uint32_t lastTestingChangeTime = 0;
 
 /* Diag functions */
 void dumpError(e131_error_t error);
@@ -273,12 +275,39 @@ void loop()
         udp.begin(E131_DEFAULT_PORT);
     }
 
-    if(testingPixels == true)
+    if(testingPixels)
     {
-        // FastLED's built-in rainbow generator
-        fill_rainbow(leds, numberOfPixels, rainbowHue);
-        rainbowHue ++;
-        FastLED.show();
+        if(testingPixels == TEST_RAINBOW)
+        {
+            // FastLED's built-in rainbow generator
+            fill_rainbow(leds, numberOfPixels, rainbowHue);
+            rainbowHue ++;
+            FastLED.show();
+        }
+        else if(testingPixels == TEST_RGB)
+        {
+            if(millis() > lastTestingChangeTime + 500)
+            {
+                lastTestingChangeTime = millis();
+
+                if(rainbowHue == 0)
+                {
+                    fill_solid(leds, numberOfPixels, CRGB(255, 0, 0));
+                    rainbowHue ++;
+                }
+                else if(rainbowHue == 1)
+                {
+                    fill_solid(leds, numberOfPixels, CRGB(0, 255, 0));
+                    rainbowHue ++;
+                }
+                else
+                {
+                    fill_solid(leds, numberOfPixels, CRGB(0, 0, 255));
+                    rainbowHue = 0;
+                }
+                FastLED.show();
+            }
+        }
     }
 
     /* Parse a packet and update pixels */
@@ -488,11 +517,20 @@ int updateParameters(String message)
             System.reset();
         case TEST_ALL:
             // do something
-            testingPixels = !testingPixels;
+            testingPixels = values[1];
 
-            if(testingPixels == false)
+            if(testingPixels == TEST_OFF)
             {
-                fill_solid(leds, numberOfPixels, CHSV(0, 0, 0));
+                fill_solid(leds, numberOfPixels, CRGB(0, 0, 0));
+                FastLED.show();
+            }
+            else if(testingPixels == TEST_RGB)
+            {
+                rainbowHue = 0;
+            }
+            else if(testingPixels == TEST_WHITE)
+            {
+                fill_solid(leds, numberOfPixels, CRGB(255, 255, 255));
                 FastLED.show();
             }
             break;
@@ -631,7 +669,7 @@ void setupLEDs()
     // Turn off all the old LEDs if there are any
     fill_solid(leds, numberOfPixels, CHSV(0, 0, 0));
     FastLED.show();
-    
+
     // Determine the total number of pixels
     numberOfPixels = 0; // Reset the numberOfPixels
     int numberOfPixelsForThisOutput = 0;
@@ -644,12 +682,12 @@ void setupLEDs()
             numberOfPixels += numberOfPixelsForThisOutput;
         }
     }
-    
+
     // Realloc leds array (not malloc, since this methods can be called multiple times while the application is running)
     leds = (CRGB *)realloc(leds, numberOfPixels * sizeof(CRGB));
     // Initialize leds to 0
     memset(leds, 0, numberOfPixels * sizeof(CRGB));
-    
+
     // Add the pixels to the led array of the appropriate type and output pin
     int pixelOffset = 0;
     for(int i = 0; i < NUMBER_OF_OUTPUTS; i ++)
@@ -657,7 +695,7 @@ void setupLEDs()
         if(eepromData.outputSettings[i][NUMBER_OF_PIXELS] > 0)
         {
             numberOfPixelsForThisOutput = eepromData.outputSettings[i][NUMBER_OF_PIXELS];
-            
+
             switch(eepromData.outputSettings[i][PIXEL_TYPE])
             {
                 case jWS2811:
@@ -866,10 +904,10 @@ void setupLEDs()
                 default:
                     break;
             }
-            
+
             pixelOffset += numberOfPixelsForThisOutput;
         }
     }
-    
+
     FastLED.show();
 }
