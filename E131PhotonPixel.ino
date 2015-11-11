@@ -75,7 +75,7 @@ typedef union
         uint16_t root_flength;
         uint32_t root_vector;
         uint8_t  cid[16];
-        
+
         /* Frame Layer */
         uint16_t frame_flength;
         uint32_t frame_vector;
@@ -85,7 +85,7 @@ typedef union
         uint8_t  sequence_number;
         uint8_t  options;
         uint16_t universe;
-        
+
         /* DMP Layer */
         uint16_t dmp_flength;
         uint8_t  dmp_vector;
@@ -95,7 +95,7 @@ typedef union
         uint16_t property_value_count;
         uint8_t  property_values[513];
     } __attribute__((packed));
-    
+
     uint8_t raw[E131_PACKET_SIZE];
 } e131_packet_t;
 
@@ -171,6 +171,7 @@ uint16_t      universe;             /* DMX Universe of last valid packet */
 e131_packet_t *packet;              /* Pointer to last valid packet */
 e131_stats_t  stats;                /* Statistics tracker */
 
+enum {jWS2811 = 0, jWS2811_400, jNEOPIXEL, jWS2812, jWS2812B, jAPA104, jLPD1886};
 enum {SYSTEM_RESET = 0, TEST_ALL, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT, NAME_FOR_OUTPUT};
 
 eeprom_data_t eepromData;
@@ -179,7 +180,8 @@ eeprom_data_t eepromData;
 // + 2 for Null termination
 char outputSettingsCharArray[((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_ITEMS * 6) + NUMBER_OF_OUTPUTS + 2]; // Char arrays of the EEPROM data for cloud variable
 
-CRGB leds[1152];
+CRGB *leds = NULL;
+int numberOfPixels = 0;
 
 // An UDP instance to let us send and receive packets over UDP
 UDP udp;
@@ -189,7 +191,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "0000000007";
+String firmwareVersion = "0000000008";
 String systemVersion = "";
 
 bool testingPixels = false;
@@ -213,39 +215,35 @@ void setup()
     memset(pbuff2.raw, 0, sizeof(pbuff2.raw));
     packet = &pbuff1;
     pwbuff = &pbuff2;
-    
+
     sequence = 0;
     stats.num_packets = 0;
     stats.sequence_errors = 0;
     stats.packet_errors = 0;
-    myIp = WiFi.localIP();
-    myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
-    Serial.print("ip:");
-    Serial.println(myIp);
-    
-    systemVersion = System.version();
-    
+
+    // Auto Wi-Fi Antenna Selection
     WiFi.selectAntenna(ANT_AUTO); // ANT_INTERNAL ANT_EXTERNAL ANT_AUTO
-    
+
     // Read from EEPROM
     readEEPROMData();
-    
+
+    // Setup the LED outputs
+    setupLEDs();
+
+    // Setup the Serial connection for debugging
     Serial.begin(115200);
-    
+
     // Setup cloud variables and functions
+    systemVersion = System.version();
+    myIp = WiFi.localIP();
+    myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
     Particle.variable("outputConfig", outputSettingsCharArray);
     Particle.variable("universeSize", eepromData.universeSize);
     Particle.variable("localIP", myIpString);
     Particle.variable("e131FVersion", firmwareVersion);
     Particle.variable("sysVersion", systemVersion);
     Particle.function("updateParams", updateParameters);
-    
-    FastLED.addLeds<WS2812, 0>(leds, 0, 150); // Pin 0, 576 pixels
-    FastLED.addLeds<WS2812, 1>(leds, 150, 64); // Pin 5, 576 pixels
-    FastLED.addLeds<WS2812, 5>(leds, 214, 200); // Pin 5, 576 pixels
-    FastLED.addLeds<WS2812, 6>(leds, 414, 45); // Pin 5, 576 pixels
-    FastLED.show();
-    
+
     // Setup the UDP connection
     if(udp.setBuffer(E131_PACKET_SIZE, pwbuff->raw))
     {
@@ -270,32 +268,19 @@ void loop()
         Serial.println("WiFi Back online");
         myIp = WiFi.localIP();
         myIpString = String(String(myIp[0], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[2], DEC) + "." + String(myIp[3], DEC));
+        Serial.print("ip:");
+        Serial.println(myIp);
         udp.begin(E131_DEFAULT_PORT);
     }
-    
+
     if(testingPixels == true)
     {
-        // First slide the led in one direction
-        /*for(int i = 0; i < NUM_LEDS; i++)
-         {
-         // Set the i'th led to red
-         leds[i] = CHSV(hue++, 255, 255);
-         // Show the leds
-         FastLED.show();
-         // now that we've shown the leds, reset the i'th led to black
-         // leds[i] = CRGB::Black;
-         for(int i = 0; i < NUM_LEDS; i++) {
-         leds[i].nscale8(250);
-         }
-         // Wait a little bit before we loop around and do it again
-         delay(10);
-         }*/
         // FastLED's built-in rainbow generator
-        fill_rainbow(leds, 1152, rainbowHue);
+        fill_rainbow(leds, numberOfPixels, rainbowHue);
         rainbowHue ++;
         FastLED.show();
     }
-    
+
     /* Parse a packet and update pixels */
     int dataSize = parsePacket();
     if(dataSize > 0)
@@ -305,12 +290,12 @@ void loop()
         {
             FastLED.show();
         }
-        
+
         Serial.print("u:");
         Serial.print(universe);
         Serial.print("t:");
         Serial.println(millis());
-        
+
         // Extract the dmx data and store it in each LED
         int ledIndex = 0;
         int universeShiftedI = 0;
@@ -334,7 +319,7 @@ void loop()
                 }
             }
         }
-        
+
         // For some reason, the packet for universe 7 is not being received reliably
         /*if(universe == 7)
          {
@@ -348,7 +333,7 @@ uint16_t parsePacket()
 {
     e131_error_t error;
     uint16_t retval = 0;
-    
+
     int size = udp.parsePacket();
     if (size > 0)
     {
@@ -433,41 +418,41 @@ void printUDPData(uint8_t *udpData, int size)
 void readEEPROMData()
 {
     EEPROM.get(EEPROM_DATA_ADDRESS, eepromData);
-    
+
     // See if data needs initialization
     if(eepromData.id != EEPROM_ID)
     {
         for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
         {
             // Initialize outputSettings
-            eepromData.outputSettings[i][PIXEL_TYPE] = 3; // Define as WS2811
+            eepromData.outputSettings[i][PIXEL_TYPE] = 0; // Define as WS2811
             eepromData.outputSettings[i][NUMBER_OF_PIXELS] = 0;
             eepromData.outputSettings[i][START_UNIVERSE] = 1;
             eepromData.outputSettings[i][START_CHANNEL] = 0;
             eepromData.outputSettings[i][END_UNIVERSE] = 1;
             eepromData.outputSettings[i][END_CHANNEL] = 0;
-            
+
             String("No Name").toCharArray(eepromData.outputNames[i], 32);
             //eepromData.outputNames[i] = String("No Name");
         }
-        
+
         // Init universe size
         eepromData.universeSize = DEFAULT_UNIVERSE_SIZE;
-        
+
         // Init eeprom version and ID
         eepromData.version = EEPROM_VERSION;
         eepromData.id = EEPROM_ID;
-        
+
         // Save to EEPROM
         EEPROM.put(EEPROM_DATA_ADDRESS, eepromData);
     }
-    
+
     // data structure has changed, update the model
     /*if(eepromData.version != EEPROM_VERSION)
      {
-     
+
      }*/
-    
+
     // Convert pinMaps to char arrays for cloud variable access
     outputSettingsToString();
 }
@@ -477,7 +462,7 @@ void outputSettingsToString()
 {
     memset(outputSettingsCharArray, 0, ((uint8_t)NUMBER_OF_OUTPUTS * NUMBER_OF_PIXEL_PIN_MAP_ITEMS * 6) + NUMBER_OF_OUTPUTS + 2);
     outputSettingsCharArray[0] = '\0';
-    
+
     for(byte i = 0; i < NUMBER_OF_OUTPUTS; i ++)
     {
         sprintf(outputSettingsCharArray, "%s%u,%u,%u,%u,%u,%u,%s;", outputSettingsCharArray, eepromData.outputSettings[i][PIXEL_TYPE], eepromData.outputSettings[i][NUMBER_OF_PIXELS], eepromData.outputSettings[i][START_UNIVERSE], eepromData.outputSettings[i][START_CHANNEL], eepromData.outputSettings[i][END_UNIVERSE], eepromData.outputSettings[i][END_CHANNEL], eepromData.outputNames[i]);
@@ -491,12 +476,12 @@ int updateParameters(String message)
     int values[10];
     char theName[32];
     messageValues(message, values);
-    
+
     if(values[0] == NAME_FOR_OUTPUT)
     {
         messageStrings(message, 2, theName);
     }
-    
+
     switch (values[0])
     {
         case SYSTEM_RESET:
@@ -504,10 +489,10 @@ int updateParameters(String message)
         case TEST_ALL:
             // do something
             testingPixels = !testingPixels;
-            
+
             if(testingPixels == false)
             {
-                fill_solid(leds, 1152, CHSV(0, 0, 0));
+                fill_solid(leds, numberOfPixels, CHSV(0, 0, 0));
                 FastLED.show();
             }
             break;
@@ -531,16 +516,22 @@ int updateParameters(String message)
             eepromData.outputSettings[values[1]][END_CHANNEL] = values[7];
             // Convert outputSettings to a string for cloud variable access
             outputSettingsToString();
+            // Resetup our leds array
+            setupLEDs();
             break;
         case PIXEL_TYPE_FOR_OUTPUT:
             eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
             // Convert outputSettings to a string for cloud variable access
             outputSettingsToString();
+            // Resetup our leds array
+            setupLEDs();
             break;
         case NUMBER_OF_PIXELS_FOR_OUTPUT:
             eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[2];
             // Convert outputSettings to a string for cloud variable access
             outputSettingsToString();
+            // Resetup our leds array
+            setupLEDs();
             break;
         case START_UNIVERSE_FOR_OUTPUT:
             eepromData.outputSettings[values[1]][START_UNIVERSE] = values[2];
@@ -572,7 +563,7 @@ int updateParameters(String message)
             return -1;
             break;
     }
-    
+
     return 1;
 }
 
@@ -619,7 +610,7 @@ void messageStrings(String theString, int valueToRetrieve, char *theName)
                     valueString.toCharArray(theName, 32);
                     return;
                 }
-                
+
                 ++index;
                 theString = theString.substring((commaIndex != -1 ? commaIndex : theString.length() - 1) + 1);
             }
@@ -630,7 +621,255 @@ void messageStrings(String theString, int valueToRetrieve, char *theName)
             doneReadingString = true;
         }
     }
-    
+
     String valueString = String("No Name");
     valueString.toCharArray(theName, 32);
+}
+
+void setupLEDs()
+{
+    // Turn off all the old LEDs if there are any
+    fill_solid(leds, numberOfPixels, CHSV(0, 0, 0));
+    FastLED.show();
+    
+    // Determine the total number of pixels
+    numberOfPixels = 0; // Reset the numberOfPixels
+    int numberOfPixelsForThisOutput = 0;
+    for(int i = 0; i < NUMBER_OF_OUTPUTS; i ++)
+    {
+        if(eepromData.outputSettings[i][NUMBER_OF_PIXELS] > 0)
+        {
+            numberOfPixelsForThisOutput = eepromData.outputSettings[i][NUMBER_OF_PIXELS];
+            // Add these leds to the count
+            numberOfPixels += numberOfPixelsForThisOutput;
+        }
+    }
+    
+    // Realloc leds array (not malloc, since this methods can be called multiple times while the application is running)
+    leds = (CRGB *)realloc(leds, numberOfPixels * sizeof(CRGB));
+    // Initialize leds to 0
+    memset(leds, 0, numberOfPixels * sizeof(CRGB));
+    
+    // Add the pixels to the led array of the appropriate type and output pin
+    int pixelOffset = 0;
+    for(int i = 0; i < NUMBER_OF_OUTPUTS; i ++)
+    {
+        if(eepromData.outputSettings[i][NUMBER_OF_PIXELS] > 0)
+        {
+            numberOfPixelsForThisOutput = eepromData.outputSettings[i][NUMBER_OF_PIXELS];
+            
+            switch(eepromData.outputSettings[i][PIXEL_TYPE])
+            {
+                case jWS2811:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<WS2811, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<WS2811, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<WS2811, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<WS2811, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<WS2811, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<WS2811, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<WS2811, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<WS2811, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
+                case jWS2811_400:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<WS2811_400, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<WS2811_400, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<WS2811_400, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<WS2811_400, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<WS2811_400, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<WS2811_400, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<WS2811_400, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<WS2811_400, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
+                case jNEOPIXEL:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<NEOPIXEL, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<NEOPIXEL, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<NEOPIXEL, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<NEOPIXEL, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<NEOPIXEL, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<NEOPIXEL, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<NEOPIXEL, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<NEOPIXEL, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
+                case jWS2812:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<WS2812, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<WS2812, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<WS2812, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<WS2812, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<WS2812, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<WS2812, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<WS2812, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<WS2812, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
+                case jWS2812B:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<WS2812B, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<WS2812B, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<WS2812B, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<WS2812B, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<WS2812B, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<WS2812B, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<WS2812B, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<WS2812B, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
+                case jAPA104:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<APA104, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<APA104, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<APA104, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<APA104, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<APA104, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<APA104, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<APA104, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<APA104, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
+                case jLPD1886:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<LPD1886, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<LPD1886, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<LPD1886, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<LPD1886, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<LPD1886, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<LPD1886, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<LPD1886, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<LPD1886, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
+                default:
+                    break;
+            }
+            
+            pixelOffset += numberOfPixelsForThisOutput;
+        }
+    }
+    
+    FastLED.show();
 }
