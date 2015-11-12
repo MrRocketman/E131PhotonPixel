@@ -93,7 +93,7 @@ typedef union
         uint16_t first_address;
         uint16_t address_increment;
         uint16_t property_value_count;
-        uint16_t unknownValue;
+        uint8_t unknownValue;
         uint8_t  property_values[513];
     } __attribute__((packed));
 
@@ -276,7 +276,7 @@ void loop()
         Serial.println(myIp);
         udp.begin(E131_DEFAULT_PORT);
     }
-    
+
     // Remote testing modes
     if(testingPixels)
     {
@@ -339,13 +339,13 @@ void loop()
                 int universeShiftedChannel = channel + (universe - 1) * eepromData.universeSize;
                 int universeShiftedStartChannel = eepromData.outputSettings[outputsUsingThisUniverse[i]][START_CHANNEL] + (eepromData.outputSettings[outputsUsingThisUniverse[i]][START_UNIVERSE] - 1) * eepromData.universeSize;
                 int universeShiftedEndChannel = eepromData.outputSettings[outputsUsingThisUniverse[i]][END_CHANNEL] + (eepromData.outputSettings[outputsUsingThisUniverse[i]][END_UNIVERSE] - 1) * eepromData.universeSize;
-                
+
                 // See if we found a channel/output match
                 if(universeShiftedChannel >= universeShiftedStartChannel && universeShiftedChannel <= universeShiftedEndChannel)
                 {
                     // Determine which LED in our array we should be writing to
                     ledIndex = pixelOffsetsInLEDsArray[outputsUsingThisUniverse[i]] + universeShiftedChannel / 3;
-                    
+
                     // Determine which color of data this channel is for
                     if((universeShiftedChannel - universeShiftedStartChannel) % 3 == 0)
                     {
