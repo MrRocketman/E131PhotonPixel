@@ -22,6 +22,11 @@ SYSTEM_THREAD(ENABLED); // This makes the system cloud connection run on a backg
  *
  */
 
+#define DEBUG 0
+#define DEBUG_UNIVERSE 3
+#define DEBUG_MAX_CHANNEL 9
+#define DEBUG_INTENSE 0
+
 // Helpers
 #define htons(x) ( ((x)<<8) | (((x)>>8)&0xFF) )
 #define ntohs(x) htons(x)
@@ -162,18 +167,18 @@ static const uint32_t VECTOR_ROOT = 4;
 static const uint32_t VECTOR_FRAME = 2;
 static const uint8_t VECTOR_DMP = 2;
 
-e131_packet_t pbuff1; // Packet buffer
-e131_packet_t pbuff2;   /* Double buffer */
-e131_packet_t *pwbuff;  /* Pointer to working packet buffer */
 uint8_t sequence; /* Sequence tracker */
 
-uint8_t       *data;                /* Pointer to DMX channel data */
-uint16_t      universe;             /* DMX Universe of last valid packet */
-e131_packet_t *packet;              /* Pointer to last valid packet */
-e131_stats_t  stats;                /* Statistics tracker */
+uint8_t *data; // Pointer to DMX channel data
+uint16_t universe; // DMX Universe of last valid packet
+e131_packet_t packetBuffer1; // Packet buffer
+e131_packet_t packetBuffer2; // Double buffer
+e131_packet_t *packetWorkingBuffer; // Pointer to working packet buffer
+e131_packet_t *packet; // Pointer to last valid packet
+e131_stats_t  stats; // Statistics tracker
 
 enum {TEST_OFF = 0, TEST_RAINBOW, TEST_RGB, TEST_WHITE};
-enum {jWS2811 = 0, jWS2811_400, jNEOPIXEL, jWS2812, jWS2812B, jAPA104, jLPD1886};
+enum {jWS2811 = 0, jWS2811_RBG, jWS2811_400, jNEOPIXEL, jWS2812, jWS2812B, jAPA104, jLPD1886};
 enum {SYSTEM_RESET = 0, TEST_ALL, SAVE, UNIVERSE_SIZE, CHANNEL_MAP_FOR_OUTPUT, PIXEL_TYPE_FOR_OUTPUT, NUMBER_OF_PIXELS_FOR_OUTPUT, START_UNIVERSE_FOR_OUTPUT, START_CHANNEL_FOR_OUTPUT, END_UNIVERSE_FOR_OUTPUT, END_CHANNEL_FOR_OUTPUT, NAME_FOR_OUTPUT};
 
 eeprom_data_t eepromData;
@@ -194,7 +199,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "0000000009";
+String firmwareVersion = "000000000a";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
@@ -215,10 +220,10 @@ void messageStrings(String theString, int valueToRetrieve, char *theName);
 
 void setup()
 {
-    memset(pbuff1.raw, 0, sizeof(pbuff1.raw));
-    memset(pbuff2.raw, 0, sizeof(pbuff2.raw));
-    packet = &pbuff1;
-    pwbuff = &pbuff2;
+    memset(packetBuffer1.raw, 0, sizeof(packetBuffer1.raw));
+    memset(packetBuffer2.raw, 0, sizeof(packetBuffer2.raw));
+    packet = &packetBuffer1;
+    packetWorkingBuffer = &packetBuffer2;
 
     sequence = 0;
     stats.num_packets = 0;
@@ -249,7 +254,7 @@ void setup()
     Particle.function("updateParams", updateParameters);
 
     // Setup the UDP connection
-    if(udp.setBuffer(E131_PACKET_SIZE, pwbuff->raw))
+    if(udp.setBuffer(E131_PACKET_SIZE, packetWorkingBuffer->raw))
     {
         //udp.begin(E131_DEFAULT_PORT);
     }
@@ -317,13 +322,36 @@ void loop()
     int dataSize = parsePacket();
     if(dataSize > 0)
     {
+        /*if(DEBUG_INTENSE && universe == DEBUG_UNIVERSE)
+        {
+            printUDPData(data, dataSize);
+        }
+        
+        if(DEBUG && universe == DEBUG_UNIVERSE)
+        {
+            Serial.print("u:");
+            Serial.println(universe);
+            Serial.print("ds:");
+            Serial.println(dataSize);
+        }*/
+
         int outputsUsingThisUniverse[NUMBER_OF_OUTPUTS] = {-1};
         int numberOfOutputsUsingThisUniverse = 0;
         // Determine which, if any outputs are using this universe of data and are controlling pixels
         for(int i = 0; i < NUMBER_OF_OUTPUTS; i ++)
         {
-            if(eepromData.outputSettings[i][NUMBER_OF_PIXELS] > 0 && (eepromData.outputSettings[i][START_UNIVERSE] == universe || eepromData.outputSettings[i][END_UNIVERSE] == universe))
+            if(eepromData.outputSettings[i][NUMBER_OF_PIXELS] > 0 && (eepromData.outputSettings[i][START_UNIVERSE] <= universe && eepromData.outputSettings[i][END_UNIVERSE] >= universe))
             {
+                /*if(DEBUG && universe == DEBUG_UNIVERSE)
+                {
+                    Serial.print("o:");
+                    Serial.print(i);
+                    Serial.print("su:");
+                    Serial.print(eepromData.outputSettings[i][START_UNIVERSE]);
+                    Serial.print("eu:");
+                    Serial.println(eepromData.outputSettings[i][END_UNIVERSE]);
+                }*/
+
                 outputsUsingThisUniverse[numberOfOutputsUsingThisUniverse] = i;
                 numberOfOutputsUsingThisUniverse ++;
             }
@@ -340,23 +368,60 @@ void loop()
                 int universeShiftedStartChannel = eepromData.outputSettings[outputsUsingThisUniverse[i]][START_CHANNEL] + (eepromData.outputSettings[outputsUsingThisUniverse[i]][START_UNIVERSE] - 1) * eepromData.universeSize;
                 int universeShiftedEndChannel = eepromData.outputSettings[outputsUsingThisUniverse[i]][END_CHANNEL] + (eepromData.outputSettings[outputsUsingThisUniverse[i]][END_UNIVERSE] - 1) * eepromData.universeSize;
 
+                /*if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
+                {
+                    Serial.print("o:");
+                    Serial.print(outputsUsingThisUniverse[i]);
+                    Serial.print("uc:");
+                    Serial.print(universeShiftedChannel);
+                    Serial.print("usc:");
+                    Serial.print(universeShiftedStartChannel);
+                    Serial.print("uec:");
+                    Serial.println(universeShiftedEndChannel);
+                }*/
+
                 // See if we found a channel/output match
                 if(universeShiftedChannel >= universeShiftedStartChannel && universeShiftedChannel <= universeShiftedEndChannel)
                 {
                     // Determine which LED in our array we should be writing to
-                    ledIndex = pixelOffsetsInLEDsArray[outputsUsingThisUniverse[i]] + universeShiftedChannel / 3;
+                    ledIndex = pixelOffsetsInLEDsArray[outputsUsingThisUniverse[i]] + (universeShiftedChannel - universeShiftedStartChannel) / 3;
+
+                    /*if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
+                    {
+                        Serial.print("c:");
+                        Serial.print(channel);
+                        Serial.print("v:");
+                        Serial.print(data[channel]);
+                        Serial.print("led:");
+                        Serial.println(ledIndex);
+                    }*/
 
                     // Determine which color of data this channel is for
                     if((universeShiftedChannel - universeShiftedStartChannel) % 3 == 0)
                     {
+                        /*if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
+                        {
+                            Serial.println("r");
+                        }*/
+
                         leds[ledIndex].r = data[channel];
                     }
                     else if((universeShiftedChannel - universeShiftedStartChannel) % 3 == 1)
                     {
+                        /*if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
+                        {
+                            Serial.println("g");
+                        }*/
+
                         leds[ledIndex].g = data[channel];
                     }
                     else
                     {
+                        /*if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
+                        {
+                            Serial.println("b");
+                        }*/
+
                         leds[ledIndex].b = data[channel];
                     }
                 }
@@ -376,14 +441,14 @@ uint16_t parsePacket()
     int size = udp.parsePacket();
     if (size > 0)
     {
-        udp.read(pwbuff->raw, size);
+        udp.read(packetWorkingBuffer->raw, size);
         error = validateE131Packet();
         if (!error)
         {
             e131_packet_t *swap = packet;
-            packet = pwbuff;
-            pwbuff = swap;
-            //printUDPData(pwbuff->raw, size);
+            packet = packetWorkingBuffer;
+            packetWorkingBuffer = swap;
+            //printUDPData(packetWorkingBuffer->raw, size);
             universe = htons(packet->universe);
             data = packet->property_values;
             retval = htons(packet->property_value_count) - 1;
@@ -406,13 +471,13 @@ uint16_t parsePacket()
 /* Packet validater */
 e131_error_t validateE131Packet()
 {
-    if (memcmp(pwbuff->acn_id, ACN_ID, sizeof(pwbuff->acn_id)))
+    if (memcmp(packetWorkingBuffer->acn_id, ACN_ID, sizeof(packetWorkingBuffer->acn_id)))
         return ERROR_ACN_ID;
-    if (htonl(pwbuff->root_vector) != VECTOR_ROOT)
+    if (htonl(packetWorkingBuffer->root_vector) != VECTOR_ROOT)
         return ERROR_VECTOR_ROOT;
-    if (htonl(pwbuff->frame_vector) != VECTOR_FRAME)
+    if (htonl(packetWorkingBuffer->frame_vector) != VECTOR_FRAME)
         return ERROR_VECTOR_FRAME;
-    if (pwbuff->dmp_vector != VECTOR_DMP)
+    if (packetWorkingBuffer->dmp_vector != VECTOR_DMP)
         return ERROR_VECTOR_DMP;
     return ERROR_NONE;
 }
@@ -423,7 +488,7 @@ void dumpError(e131_error_t error)
         case ERROR_ACN_ID:
             Serial.print(F("INVALID PACKET ID: "));
             for (uint8_t i = 0; i < sizeof(ACN_ID); i++)
-                Serial.print(pwbuff->acn_id[i], HEX);
+                Serial.print(packetWorkingBuffer->acn_id[i], HEX);
             Serial.println("");
             break;
         case ERROR_PACKET_SIZE:
@@ -431,21 +496,22 @@ void dumpError(e131_error_t error)
             break;
         case ERROR_VECTOR_ROOT:
             Serial.print(F("INVALID ROOT VECTOR: 0x"));
-            Serial.println(htonl(pwbuff->root_vector), HEX);
+            Serial.println(htonl(packetWorkingBuffer->root_vector), HEX);
             break;
         case ERROR_VECTOR_FRAME:
             Serial.print(F("INVALID FRAME VECTOR: 0x"));
-            Serial.println(htonl(pwbuff->frame_vector), HEX);
+            Serial.println(htonl(packetWorkingBuffer->frame_vector), HEX);
             break;
         case ERROR_VECTOR_DMP:
             Serial.print(F("INVALID DMP VECTOR: 0x"));
-            Serial.println(pwbuff->dmp_vector, HEX);
+            Serial.println(packetWorkingBuffer->dmp_vector, HEX);
     }
 }
 
 void printUDPData(uint8_t *udpData, int size)
 {
-    Serial.println("Packet");
+    Serial.print("u:");
+    Serial.println(universe);
     for(int i = 0; i < size; i ++)
     {
         Serial.print(udpData[i], HEX);
@@ -738,6 +804,35 @@ void setupLEDs()
                         break;
                 }
                     break;
+                case jWS2811_RBG:
+                    switch(i)
+                {
+                    case 0:
+                        FastLED.addLeds<WS2811, 0, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 1:
+                        FastLED.addLeds<WS2811, 1, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 2:
+                        FastLED.addLeds<WS2811, 2, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 3:
+                        FastLED.addLeds<WS2811, 3, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 4:
+                        FastLED.addLeds<WS2811, 4, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 5:
+                        FastLED.addLeds<WS2811, 5, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 6:
+                        FastLED.addLeds<WS2811, 6, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                    case 7:
+                        FastLED.addLeds<WS2811, 7, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
+                        break;
+                }
+                    break;
                 case jWS2811_400:
                     switch(i)
                 {
@@ -920,5 +1015,7 @@ void setupLEDs()
         }
     }
 
+    // Turn off all the old LEDs if there are any
+    fill_solid(leds, numberOfPixels, CHSV(0, 0, 0));
     FastLED.show();
 }
