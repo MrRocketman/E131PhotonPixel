@@ -311,7 +311,7 @@ void checkForTestingMode()
             if(millis() > lastTestingChangeTime + 500)
             {
                 lastTestingChangeTime = millis();
-                
+
                 if(rainbowHue == 0)
                 {
                     fill_solid(leds, numberOfPixels, CRGB(255, 0, 0));
@@ -351,11 +351,11 @@ void checkForUDPData()
             Serial.print(universesReceived & universesNeededBeforeDraw, BIN);
             Serial.print(" n:");
             Serial.println(universesNeededBeforeDraw, BIN);
-            
+
             universesReceived = 0;
             FastLED.show();
         }*/
-        
+
         // Initialize the local variables
         int outputsUsingThisUniverse[NUMBER_OF_OUTPUTS] = {-1};
         int numberOfOutputsUsingThisUniverse = 0;
@@ -363,7 +363,7 @@ void checkForUDPData()
         int universeShiftedChannel = 0;
         int universeShiftedStartChannel = 0;
         int universeShiftedEndChannel = 0;
-        
+
         // Determine which, if any outputs are using this universe of data and are controlling pixels
         for(int i = 0; i < NUMBER_OF_OUTPUTS; i ++)
         {
@@ -373,7 +373,7 @@ void checkForUDPData()
                 numberOfOutputsUsingThisUniverse ++;
             }
         }
-        
+
         // Extract the channel/dmx data if we have an output using this universe of data
         if(numberOfOutputsUsingThisUniverse > 0)
         {
@@ -386,13 +386,13 @@ void checkForUDPData()
                     universeShiftedChannel = channel + (universe - 1) * eepromData.universeSize;
                     universeShiftedStartChannel = universeShiftedStartChannels[outputsUsingThisUniverse[i]];
                     universeShiftedEndChannel = universeShiftedEndChannels[outputsUsingThisUniverse[i]];
-                    
+
                     // See if we found a channel/output match
                     if(universeShiftedChannel >= universeShiftedStartChannel && universeShiftedChannel <= universeShiftedEndChannel)
                     {
                         // Determine which LED in our array we should be writing to
                         ledIndex = pixelOffsetsInLEDsArray[outputsUsingThisUniverse[i]] + (universeShiftedChannel - universeShiftedStartChannel) / 3;
-                        
+
                         // Determine which color of data this channel is for
                         if((universeShiftedChannel - universeShiftedStartChannel) % 3 == 0)
                         {
@@ -410,10 +410,10 @@ void checkForUDPData()
                 }
             }
         }
-        
+
         // Add the current universe to the list of universesReceived
         universesReceived |= (1 << universe);
-        
+
         // Show the LEDs once all universes of data have been received (since FastLED doesn't seem to have a way to draw a subset of the LEDs)
         if((universesReceived & universesNeededBeforeDraw) == universesNeededBeforeDraw)
         {
@@ -746,11 +746,11 @@ void setupLEDs()
         {
             // Add the leds for this output to the total count
             numberOfPixels += eepromData.outputSettings[i][NUMBER_OF_PIXELS];;
-            
+
             // Determine the universeShiftedStart and End Channels
             universeShiftedStartChannels[i] = eepromData.outputSettings[i][START_CHANNEL] + (eepromData.outputSettings[i][START_UNIVERSE] - 1) * eepromData.universeSize;
             universeShiftedEndChannels[i] = eepromData.outputSettings[i][END_CHANNEL] + (eepromData.outputSettings[i][END_UNIVERSE] - 1) * eepromData.universeSize;
-            
+
             // Build a map of which universes are needed before we perform a draw to the LEDs
             for(int u = eepromData.outputSettings[i][START_UNIVERSE]; u <= eepromData.outputSettings[i][END_UNIVERSE]; u ++)
             {
