@@ -22,11 +22,6 @@ SYSTEM_THREAD(ENABLED); // This makes the system cloud connection run on a backg
  *
  */
 
-#define DEBUG 1
-#define DEBUG_UNIVERSE 7
-#define DEBUG_MAX_CHANNEL 9
-#define DEBUG_INTENSE 0
-
 // Helpers
 #define htons(x) ( ((x)<<8) | (((x)>>8)&0xFF) )
 #define ntohs(x) htons(x)
@@ -344,14 +339,6 @@ void checkForUDPData()
     int dataSize = parsePacket();
     if(dataSize > 0)
     {
-        if(DEBUG && universe == DEBUG_UNIVERSE)
-        {
-            Serial.print("u:");
-            Serial.println(universe);
-            Serial.print("ds:");
-            Serial.println(dataSize);
-        }
-        
         // If we have already received this universe, we haven't showed the LEDs yet. Thus a packet was dropped and we just need to draw now
         /*if(universesReceived & (1 << universe))
         {
@@ -382,16 +369,6 @@ void checkForUDPData()
         {
             if(eepromData.outputSettings[i][NUMBER_OF_PIXELS] > 0 && (eepromData.outputSettings[i][START_UNIVERSE] <= universe && eepromData.outputSettings[i][END_UNIVERSE] >= universe))
             {
-                if(DEBUG && universe == DEBUG_UNIVERSE)
-                {
-                    Serial.print("o:");
-                    Serial.print(i);
-                    Serial.print("su:");
-                    Serial.print(eepromData.outputSettings[i][START_UNIVERSE]);
-                    Serial.print("eu:");
-                    Serial.println(eepromData.outputSettings[i][END_UNIVERSE]);
-                }
-                
                 outputsUsingThisUniverse[numberOfOutputsUsingThisUniverse] = i;
                 numberOfOutputsUsingThisUniverse ++;
             }
@@ -406,18 +383,6 @@ void checkForUDPData()
                 // Check to see if this channel is being using for an output that is using this universe
                 for(int i = 0; i < numberOfOutputsUsingThisUniverse; i ++)
                 {
-                    if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
-                    {
-                        Serial.print("o:");
-                        Serial.print(outputsUsingThisUniverse[i]);
-                        Serial.print("uc:");
-                        Serial.print(universeShiftedChannel);
-                        Serial.print("usc:");
-                        Serial.print(universeShiftedStartChannel);
-                        Serial.print("uec:");
-                        Serial.println(universeShiftedEndChannel);
-                    }
-                    
                     universeShiftedChannel = channel + (universe - 1) * eepromData.universeSize;
                     universeShiftedStartChannel = universeShiftedStartChannels[outputsUsingThisUniverse[i]];
                     universeShiftedEndChannel = universeShiftedEndChannels[outputsUsingThisUniverse[i]];
@@ -427,44 +392,19 @@ void checkForUDPData()
                     {
                         // Determine which LED in our array we should be writing to
                         ledIndex = pixelOffsetsInLEDsArray[outputsUsingThisUniverse[i]] + (universeShiftedChannel - universeShiftedStartChannel) / 3;
-                        
-                        if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
-                        {
-                            Serial.print("c:");
-                            Serial.print(channel);
-                            Serial.print("v:");
-                            Serial.print(data[channel]);
-                            Serial.print("led:");
-                            Serial.println(ledIndex);
-                        }
 
                         // Determine which color of data this channel is for
                         if((universeShiftedChannel - universeShiftedStartChannel) % 3 == 0)
                         {
                             leds[ledIndex].r = data[channel];
-                            
-                            if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
-                            {
-                                Serial.println("r");
-                            }
                         }
                         else if((universeShiftedChannel - universeShiftedStartChannel) % 3 == 1)
                         {
                             leds[ledIndex].g = data[channel];
-                            
-                            if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
-                            {
-                                Serial.println("g");
-                            }
                         }
                         else
                         {
                             leds[ledIndex].b = data[channel];
-                            
-                            if(DEBUG && channel < DEBUG_MAX_CHANNEL && universe == DEBUG_UNIVERSE)
-                            {
-                                Serial.println("b");
-                            }
                         }
                     }
                 }
