@@ -199,7 +199,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "000000000a";
+String firmwareVersion = "000000000b";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
