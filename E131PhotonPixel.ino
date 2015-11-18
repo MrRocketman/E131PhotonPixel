@@ -104,6 +104,7 @@ typedef union
 #define NUMBER_OF_OUTPUTS 8 // Technically there are 16 available. The extra 8 are just blank headers on the circuit board currently though
 
 #define DEFAULT_UNIVERSE_SIZE 512
+#define MAXIMUM_UNIVERSE_ACCEPTED 128
 
 #define EEPROM_DATA_ADDRESS 0
 #define EEPROM_ID 0x7A2E0a
@@ -186,8 +187,8 @@ CRGB *leds = NULL;
 int pixelOffsetsInLEDsArray[NUMBER_OF_OUTPUTS] = {0};
 int universeShiftedStartChannels[NUMBER_OF_OUTPUTS] = {0};
 int universeShiftedEndChannels[NUMBER_OF_OUTPUTS] = {0};
-uint32_t universesReceived = 0; // This limits to the number of universes to 32
-uint32_t universesNeededBeforeDraw = 0; // This limits to the number of universes to 32
+uint8_t universesReceived[MAXIMUM_UNIVERSE_ACCEPTED] = {0}; // This limits to the number of universes to MAXIMUM_UNIVERSE_ACCEPTED
+uint8_t universesNeededBeforeDraw[MAXIMUM_UNIVERSE_ACCEPTED] = {0}; // This limits to the number of universes to MAXIMUM_UNIVERSE_ACCEPTED
 int numberOfPixels = 0;
 
 // An UDP instance to let us send and receive packets over UDP
@@ -340,7 +341,7 @@ void checkForUDPData()
     if(dataSize > 0)
     {
         // If we have already received this universe, we haven't showed the LEDs yet. Thus a packet was dropped and we just need to draw now
-        /*if(universesReceived & (1 << universe))
+        /*if(universesReceived[universe] == 1)
         {
             Serial.println("Dropped Packet");
             Serial.print("u:");
@@ -352,7 +353,7 @@ void checkForUDPData()
             Serial.print(" n:");
             Serial.println(universesNeededBeforeDraw, BIN);
 
-            universesReceived = 0;
+            memset(universesReceived, 0, MAXIMUM_UNIVERSE_ACCEPTED * sizeof(uint8_t));
             FastLED.show();
         }*/
 
@@ -412,12 +413,12 @@ void checkForUDPData()
         }
 
         // Add the current universe to the list of universesReceived
-        universesReceived |= (1 << universe);
+        universesReceived[universe] = 1;
 
         // Show the LEDs once all universes of data have been received (since FastLED doesn't seem to have a way to draw a subset of the LEDs)
-        if((universesReceived & universesNeededBeforeDraw) == universesNeededBeforeDraw)
+        if(memcmp(universesReceived, universesNeededBeforeDraw, MAXIMUM_UNIVERSE_ACCEPTED) == 0)
         {
-            universesReceived = 0;
+            memset(universesReceived, 0, MAXIMUM_UNIVERSE_ACCEPTED * sizeof(uint8_t));
             FastLED.show();
         }
     }
@@ -754,7 +755,7 @@ void setupLEDs()
             // Build a map of which universes are needed before we perform a draw to the LEDs
             for(int u = eepromData.outputSettings[i][START_UNIVERSE]; u <= eepromData.outputSettings[i][END_UNIVERSE]; u ++)
             {
-                universesNeededBeforeDraw |= (1 << u);
+                universesNeededBeforeDraw[u] = 1;
             }
         }
     }
