@@ -1,7 +1,7 @@
 #include "FastLED.h"
 FASTLED_USING_NAMESPACE;
 
-SYSTEM_THREAD(ENABLED); // This makes the system cloud connection run on a background thread so as to not delay our timing
+SYSTEM_MODE(MANUAL);
 
 /*
  * E131.h
@@ -199,7 +199,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "000000000b";
+String firmwareVersion = "000000000c";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
@@ -223,6 +223,8 @@ void messageStrings(String theString, int valueToRetrieve, char *theName);
 
 void setup()
 {
+    Particle.connect();
+
     memset(packetBuffer1.raw, 0, sizeof(packetBuffer1.raw));
     memset(packetBuffer2.raw, 0, sizeof(packetBuffer2.raw));
     packet = &packetBuffer1;
@@ -293,6 +295,20 @@ void checkWiFiStatus()
         Serial.println(myIp);
         udp.begin(E131_DEFAULT_PORT);
     }
+
+    // TODO: This needs optimization
+    // Reconnect to the cloud if we aren't receiving UDP data and we are diconnected
+    if(millis() - lastUDPPacketReceiveTime > 2000)
+    {
+        if(!Particle.connected())
+        {
+            Particle.connect();
+        }
+        else
+        {
+            Particle.process();
+        }
+    }
 }
 
 void checkForTestingMode()
@@ -340,6 +356,13 @@ void checkForUDPData()
     int dataSize = parsePacket();
     if(dataSize > 0)
     {
+        // Disconnect from the cloud since we are receiving tons of UDP data and need all the CPU time we can get
+        if(Particle.connected())
+        {
+            Particle.disconnect();
+        }
+        lastUDPPacketReceiveTime = millis();
+
         // If we have already received this universe, we haven't showed the LEDs yet. Thus a packet was dropped and we just need to draw now
         /*if(universesReceived[universe] == 1)
         {
