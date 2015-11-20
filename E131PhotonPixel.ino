@@ -193,13 +193,14 @@ int numberOfPixels = 0;
 
 // An UDP instance to let us send and receive packets over UDP
 UDP udp;
-int lastUDPPacketReceiveTime = 0;
+int lastDrawTime = 0;
+const int millisecondsBetweenDrawCalls = 20;
 
 bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "000000000b";
+String firmwareVersion = "000000000d";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
@@ -413,12 +414,17 @@ void checkForUDPData()
         }
 
         // Add the current universe to the list of universesReceived
-        universesReceived[universe] = 1;
+        /*universesReceived[universe] = 1;
 
         // Show the LEDs once all universes of data have been received (since FastLED doesn't seem to have a way to draw a subset of the LEDs)
         if(memcmp(universesReceived, universesNeededBeforeDraw, MAXIMUM_UNIVERSE_ACCEPTED) == 0)
         {
             memset(universesReceived, 0, MAXIMUM_UNIVERSE_ACCEPTED * sizeof(uint8_t));
+            FastLED.show();
+        }*/
+
+        if(millis() - lastDrawTime > millisecondsBetweenDrawCalls)
+        {
             FastLED.show();
         }
     }
