@@ -200,7 +200,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "000000000e";
+String firmwareVersion = "000000000d";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
@@ -293,28 +293,6 @@ void checkWiFiStatus()
         Serial.print("ip:");
         Serial.println(myIp);
         udp.begin(E131_DEFAULT_PORT);
-        joinMulticastAddresses(true);
-    }
-}
-
-void joinMulticastAddresses(bool shouldJoin)
-{
-    for(int i = 0; i < NUMBER_OF_OUTPUTS; i ++)
-    {
-        if(eepromData.outputSettings[i][NUMBER_OF_PIXELS] > 0)
-        {
-            for(int u = eepromData.outputSettings[i][START_UNIVERSE]; u < eepromData.outputSettings[i][END_UNIVERSE]; u ++)
-            {
-                if(shouldJoin)
-                {
-                    udp.joinMulticast(IPAddress(239, 255, 0, u));
-                }
-                else
-                {
-                    udp.leaveMulticast(IPAddress(239, 255, 0, u));
-                }
-            }
-        }
     }
 }
 
@@ -641,7 +619,6 @@ int updateParameters(String message)
             eepromData.universeSize = values[1];
             break;
         case CHANNEL_MAP_FOR_OUTPUT: // output,pixelType,numberOfPixels,startUniverse,startChannel,endUniverse,endChannel,
-            joinMulticastAddresses(false);
             // Update pin map
             eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
             eepromData.outputSettings[values[1]][NUMBER_OF_PIXELS] = values[3];
@@ -653,7 +630,6 @@ int updateParameters(String message)
             outputSettingsToString();
             // Resetup our leds array
             setupLEDs();
-            joinMulticastAddresses(true);
             break;
         case PIXEL_TYPE_FOR_OUTPUT:
             eepromData.outputSettings[values[1]][PIXEL_TYPE] = values[2];
@@ -670,11 +646,9 @@ int updateParameters(String message)
             setupLEDs();
             break;
         case START_UNIVERSE_FOR_OUTPUT:
-            joinMulticastAddresses(false);
             eepromData.outputSettings[values[1]][START_UNIVERSE] = values[2];
             // Convert outputSettings to a string for cloud variable access
             outputSettingsToString();
-            joinMulticastAddresses(true);
             break;
         case START_CHANNEL_FOR_OUTPUT:
             eepromData.outputSettings[values[1]][START_CHANNEL] = values[2];
@@ -682,11 +656,9 @@ int updateParameters(String message)
             outputSettingsToString();
             break;
         case END_UNIVERSE_FOR_OUTPUT:
-            joinMulticastAddresses(false);
             eepromData.outputSettings[values[1]][END_UNIVERSE] = values[2];
             // Convert outputSettings to a string for cloud variable access
             outputSettingsToString();
-            joinMulticastAddresses(true);
             break;
         case END_CHANNEL_FOR_OUTPUT:
             eepromData.outputSettings[values[1]][END_CHANNEL] = values[2];
