@@ -200,7 +200,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "000000000d";
+String firmwareVersion = "0000000010";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
@@ -271,6 +271,12 @@ void loop()
     checkForTestingMode();
 
     checkForUDPData();
+    
+    if(millis() - lastDrawTime > millisecondsBetweenDrawCalls)
+    {
+        lastDrawTime = millis();
+        FastLED.show();
+    }
 }
 
 void checkWiFiStatus()
@@ -422,11 +428,6 @@ void checkForUDPData()
             memset(universesReceived, 0, MAXIMUM_UNIVERSE_ACCEPTED * sizeof(uint8_t));
             FastLED.show();
         }*/
-
-        if(millis() - lastDrawTime > millisecondsBetweenDrawCalls)
-        {
-            FastLED.show();
-        }
     }
 }
 
