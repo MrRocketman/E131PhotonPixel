@@ -200,7 +200,7 @@ bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "0000000011";
+String firmwareVersion = "0000000010";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
@@ -271,7 +271,7 @@ void loop()
     checkForTestingMode();
 
     checkForUDPData();
-
+    
     if(millis() - lastDrawTime > millisecondsBetweenDrawCalls)
     {
         lastDrawTime = millis();
@@ -787,28 +787,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<WS2811, 0>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<WS2811, 1>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<WS2811, 2>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<WS2811, 3>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<WS2811, 4>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<WS2811, 5>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<WS2811, 6>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<WS2811, 7>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
@@ -816,28 +816,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<WS2811, 0, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 0, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<WS2811, 1, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 1, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<WS2811, 2, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 2, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<WS2811, 3, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 3, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<WS2811, 4, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 4, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<WS2811, 5, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 5, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<WS2811, 6, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 6, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<WS2811, 7, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811, 7, RBG>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
@@ -845,28 +845,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<WS2811_400, 0>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<WS2811_400, 1>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<WS2811_400, 2>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<WS2811_400, 3>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<WS2811_400, 4>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<WS2811_400, 5>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<WS2811_400, 6>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<WS2811_400, 7>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(Typical8mmPixel);
+                        FastLED.addLeds<WS2811_400, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
@@ -874,28 +874,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<NEOPIXEL, 0>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<NEOPIXEL, 1>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<NEOPIXEL, 2>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<NEOPIXEL, 3>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<NEOPIXEL, 4>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<NEOPIXEL, 5>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<NEOPIXEL, 6>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<NEOPIXEL, 7>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<NEOPIXEL, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
@@ -903,28 +903,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<WS2812, 0>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<WS2812, 1>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<WS2812, 2>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<WS2812, 3>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<WS2812, 4>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<WS2812, 5>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<WS2812, 6>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<WS2812, 7>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
@@ -932,28 +932,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<WS2812B, 0>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<WS2812B, 1>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<WS2812B, 2>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<WS2812B, 3>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<WS2812B, 4>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<WS2812B, 5>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<WS2812B, 6>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<WS2812B, 7>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<WS2812B, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
@@ -961,28 +961,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<APA104, 0>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<APA104, 1>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<APA104, 2>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<APA104, 3>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<APA104, 4>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<APA104, 5>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<APA104, 6>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<APA104, 7>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<APA104, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
@@ -990,28 +990,28 @@ void setupLEDs()
                     switch(i)
                 {
                     case 0:
-                        FastLED.addLeds<LPD1886, 0>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 0>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 1:
-                        FastLED.addLeds<LPD1886, 1>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 1>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 2:
-                        FastLED.addLeds<LPD1886, 2>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 2>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 3:
-                        FastLED.addLeds<LPD1886, 3>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 3>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 4:
-                        FastLED.addLeds<LPD1886, 4>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 4>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 5:
-                        FastLED.addLeds<LPD1886, 5>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 5>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 6:
-                        FastLED.addLeds<LPD1886, 6>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 6>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                     case 7:
-                        FastLED.addLeds<LPD1886, 7>(leds, pixelOffset, numberOfPixelsForThisOutput).setCorrection(TypicalLEDStrip);
+                        FastLED.addLeds<LPD1886, 7>(leds, pixelOffset, numberOfPixelsForThisOutput);
                         break;
                 }
                     break;
