@@ -198,9 +198,10 @@ const int millisecondsBetweenDrawCalls = 20;
 
 bool previousWiFiReadiness = false;
 bool wiFiReadiness = false;
+int wiFiDisconnectTime = 0;
 IPAddress myIp;
 String myIpString = "";
-String firmwareVersion = "0000000010";
+String firmwareVersion = "0000000012";
 String systemVersion = "";
 
 uint8_t testingPixels = 0;
@@ -271,7 +272,7 @@ void loop()
     checkForTestingMode();
 
     checkForUDPData();
-    
+
     if(millis() - lastDrawTime > millisecondsBetweenDrawCalls)
     {
         lastDrawTime = millis();
@@ -289,6 +290,7 @@ void checkWiFiStatus()
     {
         Serial.println("WiFi not ready");
         udp.stop();
+        wiFiDisconnectTime = millis();
     }
     // WiFi is back. Open up udp port again
     else if(wiFiReadiness == true && previousWiFiReadiness == false)
@@ -299,6 +301,13 @@ void checkWiFiStatus()
         Serial.print("ip:");
         Serial.println(myIp);
         udp.begin(E131_DEFAULT_PORT);
+    }
+    // WiFi connection was lost and has been for a while
+    else if(wiFiReadiness == false && previousWiFiReadiness == false && wiFiDisconnectTime > 0 && millis() - wiFiDisconnectTime > 5000)
+    {
+        wiFiDisconnectTime = 0;
+        // Reboot since we can't seem to find a WiFi connection
+        System.reset();
     }
 }
 
